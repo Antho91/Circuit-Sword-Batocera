@@ -1,0 +1,29 @@
+=== 1. is RetroArch running? (busybox-safe, no pgrep) ===
+=== 2. RetroArch's Wayland environment ===
+=== 3. which process holds each DRM node ===
+1739 labwc -> /dev/dri/card0
+1739 labwc -> /dev/dri/card0
+1739 labwc -> /dev/dri/renderD128
+1739 labwc -> /dev/dri/renderD128
+1739 labwc -> /dev/dri/renderD128
+1739 labwc -> /dev/dri/renderD128
+1739 labwc -> /dev/dri/renderD128
+1739 labwc -> /dev/dri/card0
+1739 labwc -> /dev/dri/card0
+1739 labwc -> /dev/dri/card0
+1772 labwc -> /dev/dri/card0
+2058 emulationstatio -> /dev/dri/renderD128
+2058 emulationstatio -> /dev/dri/renderD128
+2058 emulationstatio -> /dev/dri/renderD128
+=== 4. labnag present? ===
+-rwxr-xr-x 1 root root 52712 Aug  5 19:56 /usr/bin/labnag
+=== 5. overlay-layer surface for 15 seconds (WATCH THE SCREEN) ===
+Expect a bar reading 'QUICKMENU OVERLAY SPIKE' on top of the game.
+labnag exit rc=254
+=== 6. game still running afterwards? ===
+=== spike done ===
+
+Manually confirmed by user: overlay bar "QUICKMENU OVERLAY SPIKE" visibly
+appeared over the EmulationStation main menu on the physical device screen
+during the 15s window (RetroArch was not running this session -- device
+needed a reboot to launch games again, unrelated to this spike).

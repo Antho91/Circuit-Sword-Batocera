@@ -1,0 +1,42 @@
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+=== 1. DRM nodes present ===
+total 0
+drwxr-xr-x 2 root root        80 Jan  1  1980 by-path
+crw-rw---- 1 root video 226,   0 Aug  6 10:08 card0
+crw-rw-rw- 1 root video 226, 128 Jan  1  1980 renderD128
+=== 2. is RetroArch running? (busybox-safe, no pgrep) ===
+=== 3. which process holds each DRM node open ===
+5697 labwc -> /dev/dri/card0
+5697 labwc -> /dev/dri/card0
+5697 labwc -> /dev/dri/renderD128
+5697 labwc -> /dev/dri/renderD128
+5697 labwc -> /dev/dri/renderD128
+5697 labwc -> /dev/dri/renderD128
+5697 labwc -> /dev/dri/renderD128
+5697 labwc -> /dev/dri/card0
+5697 labwc -> /dev/dri/card0
+5697 labwc -> /dev/dri/card0
+5699 labwc -> /dev/dri/card0
+5895 emulationstatio -> /dev/dri/renderD128
+5895 emulationstatio -> /dev/dri/renderD128
+5895 emulationstatio -> /dev/dri/renderD128
+=== 4. current VT (before) ===
+1
+=== 5. chvt availability ===
+/usr/bin/chvt
+/usr/bin/openvt
+=== 6. python3 VT_ACTIVATE to tty6, then batocera-drminfo, then back ===
+VT before = 1
+VT_ACTIVATE(6) OK
+batocera-drminfo rc = 0
+1.0:DPI 640x480 75Hz (640x480*)
+
+using card '/dev/dri/card0'
+connector HDMIA disconnected
+
+VT restored to 1
+=== 7. current VT (after) ===
+1
+=== spike done ===

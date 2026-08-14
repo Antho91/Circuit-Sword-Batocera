@@ -1,0 +1,47 @@
+## Circuit-Sword WiFi preseed -- NOT a drop-in file, see below.
+##
+## CORRECTED after real hardware testing (2026-08-04): dropping a
+## batocera.conf file onto the boot partition, or hand-editing
+## /userdata/system/batocera.conf directly over SSH, does NOT reliably
+## get picked up -- batocera.conf is not live-watched, and a raw file
+## edit was confirmed on-device to not take effect even after reboot.
+## The values below only take effect through the tool that actually
+## triggers config application:
+##
+## FURTHER CONFIRMED (2026-08-05): hand-editing /boot/batocera-boot.conf
+## directly on the SD card (e.g. via a Mac-mounted /Volumes/BATOCERA/
+## batocera-boot.conf) is an explicit trap, not just "doesn't get
+## picked up" -- it DOES work, but only for the device's very first
+## boot ever (S08connman falls back to reading boot.conf only while
+## /userdata/system/batocera.conf doesn't exist yet, and never copies
+## those values into /userdata). The first shutdown after that then
+## runs S65values4boot, which syncs boot.conf FROM the (still-blank)
+## /userdata master -- silently erasing whatever you hand-edited into
+## boot.conf. Net effect: WiFi works for exactly one boot, then reverts
+## to disabled on every boot after, looking like it "turned itself off".
+## Editing boot.conf is a one-shot bootstrap at best -- always also (or
+## instead) do Option A or B below on the live system.
+##
+## Option A -- EmulationStation UI (confirmed working on real hardware):
+##   Menu (Start) -> Network Settings -> enable WiFi, fill in SSID/password.
+##
+## Option B -- SSH, using the settings CLI (not a raw file edit):
+##   ssh root@<device-ip>
+##   batocera-settings-set wifi.enabled 1
+##   batocera-settings-set wifi.ssid "YOUR_SSID"
+##   batocera-settings-set wifi.key "YOUR_WIFI_PASSWORD"
+##   reboot
+##
+## Either path writes into /userdata/system/batocera.conf for you and
+## applies it correctly. NEVER paste your real SSID/password into chat
+## or commit them anywhere -- enter them directly on the device.
+##
+## Reference: the raw keys these tools set (for context only -- do not
+## place this content as a standalone file and expect it to be read):
+## package/batocera/core/batocera-system/batocera.conf (lines ~104-113)
+
+wifi.enabled=1
+wifi.country=NL
+wifi.ssid=YOUR_SSID_HERE
+wifi.key=YOUR_WIFI_PASSWORD_HERE
+system.hostname=CIRCUITSWORD

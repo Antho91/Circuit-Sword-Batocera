@@ -1,0 +1,26 @@
+# Batocera build tree: regenerable via batocera-build/scripts/setup-build-tree.sh
+# (a full git clone of batocera-linux/batocera.linux + submodule -- large,
+# and the patches/ + overlay/ directories are the actual source of truth).
+batocera-build/build/
+batocera-build/*.dmg
+
+# Build output/downloads/ccache: regenerable, multi-hundred-GB working set.
+/output/
+
+# RetroPie-era build output (raw disk images): regenerable via
+# Retropie_source/build.sh, not part of the read-only reference material.
+Retropie_source/output/
+
+# Build logs.
+docs/superpowers/plans/*.log
+
+# Never commit filled-in WiFi credentials.
+batocera.conf
+
+# macOS Finder metadata.
+.DS_Store
+
+# Claude Code / Superpowers tooling state (scheduled-task locks, brainstorm
+# companion server state) -- not project source.
+.claude/
+.superpowers/

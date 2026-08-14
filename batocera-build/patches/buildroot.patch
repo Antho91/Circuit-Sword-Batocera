@@ -1,0 +1,111 @@
+diff --git a/package/genimage/genimage.mk b/package/genimage/genimage.mk
+index 5d8758a0aa..4527c678b0 100644
+--- a/package/genimage/genimage.mk
++++ b/package/genimage/genimage.mk
+@@ -7,7 +7,14 @@
+ GENIMAGE_VERSION = 19
+ GENIMAGE_SOURCE = genimage-$(GENIMAGE_VERSION).tar.xz
+ GENIMAGE_SITE = https://github.com/pengutronix/genimage/releases/download/v$(GENIMAGE_VERSION)
+-HOST_GENIMAGE_DEPENDENCIES = host-pkgconf host-libconfuse
++# Circuit-Sword: genimage shells out to mkdosfs at image-generation time
++# for vfat boot partitions (our board's genimage.cfg needs boot.vfat) --
++# nothing else in this build pulled in host-dosfstools, so mkdosfs was
++# missing entirely, causing "mkdosfs: not found" during target-post-image.
++# It also shells out to mcopy (mtools) to populate the formatted vfat
++# image with files -- same gap, "mcopy: not found" was the next failure
++# once mkdosfs was fixed.
++HOST_GENIMAGE_DEPENDENCIES = host-pkgconf host-libconfuse host-dosfstools host-mtools
+ GENIMAGE_LICENSE = GPL-2.0
+ GENIMAGE_LICENSE_FILES = COPYING
+ 
+diff --git a/package/heimdal/heimdal.mk b/package/heimdal/heimdal.mk
+index 64d97c9861..6ab18bb100 100644
+--- a/package/heimdal/heimdal.mk
++++ b/package/heimdal/heimdal.mk
+@@ -32,6 +32,10 @@ HOST_HEIMDAL_CONF_OPTS = \
+ HOST_HEIMDAL_CONF_ENV = ac_cv_prog_COMPILE_ET=no MAKEINFO=true
+ # batocera - add the -fPIC flag.
+ HOST_HEIMDAL_CONF_ENV += CFLAGS="$(HOST_CFLAGS) -fPIC"
++# Circuit-Sword local fix: newer glibc split crypt() into libcrypt, and
++# heimdal's test binaries (test_crypto, krbhst-test, etc.) don't link
++# against it explicitly, causing "undefined reference to `crypt'".
++HOST_HEIMDAL_CONF_ENV += LIBS="-lcrypt"
+ 
+ HEIMDAL_LICENSE = BSD-3-Clause
+ HEIMDAL_LICENSE_FILES = LICENSE
+diff --git a/package/libzlib/libzlib.mk b/package/libzlib/libzlib.mk
+index bc5092d9a9..21889da239 100644
+--- a/package/libzlib/libzlib.mk
++++ b/package/libzlib/libzlib.mk
+@@ -11,6 +11,7 @@ LIBZLIB_LICENSE = Zlib
+ LIBZLIB_LICENSE_FILES = LICENSE
+ LIBZLIB_INSTALL_STAGING = YES
+ LIBZLIB_PROVIDES = zlib
++HOST_LIBZLIB_PROVIDES = host-zlib
+ LIBZLIB_CPE_ID_VENDOR = zlib
+ LIBZLIB_CPE_ID_PRODUCT = zlib
+ 
+diff --git a/package/m4/m4.mk b/package/m4/m4.mk
+index 39ad898b10..73f4ebef96 100644
+--- a/package/m4/m4.mk
++++ b/package/m4/m4.mk
+@@ -10,4 +10,12 @@ M4_SITE = $(BR2_GNU_MIRROR)/m4
+ M4_LICENSE = GPL-3.0+
+ M4_LICENSE_FILES = COPYING
+ 
++# gcc-15 defaults to -std=gnu23 which is incorrectly detected and
++# generates build failures in the gnulib copy included in m4-1.4.19.
++# Force the previous gcc default standard (-std=gnu17) unconditionally —
++# this pinned Buildroot checkout predates BR2_HOST_GCC_AT_LEAST_15
++# detection (added upstream in commit 7a07a9d155b8f601d68f07ee0ed1dc8d48907644),
++# and -std=gnu17 is harmless on any host gcc that supports it (8+).
++HOST_M4_CONF_ENV = CFLAGS="$(HOST_CFLAGS) -std=gnu17"
++
+ $(eval $(host-autotools-package))
+diff --git a/package/rust-bin/rust-bin.hash b/package/rust-bin/rust-bin.hash
+index 0150c7c5a5..468857e6ca 100644
+--- a/package/rust-bin/rust-bin.hash
++++ b/package/rust-bin/rust-bin.hash
+@@ -1,5 +1,14 @@
+ # Generated with utils/update-rust
+ # Do not edit manually
++#
++# Locally bumped to 1.96.0 for this build only (rustc 1.92.0 was too old for
++# host-cargo-c v0.10.19's vendored dependency MSRVs — see WIFI-BUILD-FINDINGS.md
++# failure #14). Only the two arch variants this build actually uses
++# (x86_64 host, aarch64 target std) were fetched and hashed for 1.96.0;
++# all other 1.92.0 entries below are unused by this build and left as-is.
++sha256  c295047583a56238ea06b43f849f4b877fa12bfd4c7103f8d9a74c94c9c4e108  rust-1.96.0-x86_64-unknown-linux-gnu.tar.xz
++sha256  371eadcca97062219cbd8593628eb5d2802bc370515d085fedce1b56b2baed57  rust-1.96.0-aarch64-unknown-linux-gnu.tar.xz
++sha256  538e85452709687797d990579a491ff9b02f8bffba4a5d54cfa945e28868053e  rust-std-1.96.0-aarch64-unknown-linux-gnu.tar.xz
+ 
+ # From https://static.rust-lang.org/dist/rust-1.92.0-aarch64-unknown-linux-gnu.tar.xz.sha256
+ sha256  3e383f8b4fca710d0600d0c1de97b78281672be2cda6575ecbe1c183a12e3822  rust-1.92.0-aarch64-unknown-linux-gnu.tar.xz
+diff --git a/package/rust-bin/rust-bin.mk b/package/rust-bin/rust-bin.mk
+index db7d4a1cae..498fb51974 100644
+--- a/package/rust-bin/rust-bin.mk
++++ b/package/rust-bin/rust-bin.mk
+@@ -6,7 +6,7 @@
+ 
+ # When updating this version, check whether support/download/cargo-post-process
+ # still generates the same archives.
+-RUST_BIN_VERSION = 1.92.0
++RUST_BIN_VERSION = 1.96.0
+ RUST_BIN_SITE = https://static.rust-lang.org/dist
+ RUST_BIN_LICENSE = Apache-2.0 or MIT
+ RUST_BIN_LICENSE_FILES = LICENSE-APACHE LICENSE-MIT
+diff --git a/package/squashfs/squashfs.mk b/package/squashfs/squashfs.mk
+index b9fbf54b01..3ec58aa317 100644
+--- a/package/squashfs/squashfs.mk
++++ b/package/squashfs/squashfs.mk
+@@ -82,8 +82,8 @@ endef
+ define HOST_SQUASHFS_BUILD_CMDS
+ 	$(HOST_MAKE_ENV) $(MAKE) \
+ 		CC="$(HOSTCC)" \
+-		EXTRA_CFLAGS="$(HOST_CFLAGS)" \
+-		EXTRA_LDFLAGS="$(HOST_LDFLAGS)" \
++		EXTRA_CFLAGS="$(HOST_CFLAGS) -I$(HOST_DIR)/include" \
++		EXTRA_LDFLAGS="$(HOST_LDFLAGS) -L$(HOST_DIR)/lib" \
+ 		$(HOST_SQUASHFS_MAKE_ARGS) \
+ 		-C $(@D)/squashfs-tools/
+ endef

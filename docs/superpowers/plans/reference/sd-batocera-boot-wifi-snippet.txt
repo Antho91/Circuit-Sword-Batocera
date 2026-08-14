@@ -1,0 +1,12 @@
+# Append these 3 lines to the END of /boot/batocera-boot.conf on the SD card
+# (do not replace the whole file — just add these lines after what's already
+# there). Fill in YOUR_WIFI_SSID and YOUR_WIFI_PASSWORD yourself before
+# copying — do not send credentials through chat.
+#
+# SSID is case-sensitive; escape special characters with a backslash (\).
+# After Batocera imports these on boot, it deactivates wifi.import.enabled
+# automatically (safe to leave the file as-is afterward).
+
+wifi.import.enabled=1
+nas.wifi.ssid=YOUR_WIFI_SSID
+nas.wifi.key=YOUR_WIFI_PASSWORD
