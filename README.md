@@ -229,18 +229,28 @@ Full troubleshooting history (every error hit and its fix) is in
    ("Use custom" — do not unzip first, the Imager handles `.gz` directly).
    `dd` on macOS hit permission issues in earlier testing; Raspberry Pi
    Imager was used instead.
-2. Boot, then set WiFi **on the live system** — through
-   `Menu → Network Settings` in EmulationStation, or over SSH:
-   ```bash
-   ssh root@<device-ip>
-   batocera-settings-set wifi.enabled 1
-   batocera-settings-set wifi.ssid "your-ssid"
-   batocera-settings-set wifi.key "your-password"
-   reboot
-   ```
-   (never paste real credentials into chat or commit them). This writes to
-   `/userdata/system/batocera.conf`, the persistent master config — the
-   only place that survives.
+2. Boot, then set WiFi **on the live system**. SSH is not reachable until
+   the device already has network, so start with whichever of these gets
+   you there:
+
+   - **Option A — EmulationStation menu (no network needed, do this
+     first):** `Menu (Start) → Network Settings` on the device itself,
+     using the controls — enable WiFi, fill in SSID/password. This is
+     the only step that works with zero prior network access.
+   - **Option B — SSH, once you have network** (either from Option A
+     already being done, or after a one-boot `boot.conf` bootstrap — see
+     the warning below):
+     ```bash
+     ssh root@<device-ip>
+     batocera-settings-set wifi.enabled 1
+     batocera-settings-set wifi.ssid "your-ssid"
+     batocera-settings-set wifi.key "your-password"
+     reboot
+     ```
+     (never paste real credentials into chat or commit them).
+
+   Either path writes to `/userdata/system/batocera.conf`, the persistent
+   master config — the only place that survives.
 
    **Do not rely on pre-filling `/boot/batocera-boot.conf` on the SD card**
    (e.g. via a Mac-mounted `/Volumes/BATOCERA/batocera-boot.conf`) as a
