@@ -46,29 +46,27 @@ a confusing, unrelated-looking error deep inside its own Makefile (not a
 clear "your path has a space" message).
 
 `batocera-build/scripts/env.sh` now fails fast and explicitly if the
-effective `BATOCERA_SRC` contains a space, instead of letting this
-corrupt a build silently. **Before your first build**, set
-`BATOCERA_SRC` to an explicit, space-free path:
+effective `BATOCERA_SRC`, `OUTPUT_DIR`, `DL_DIR`, or `CCACHE_DIR`
+contains a space, instead of letting this corrupt a build silently.
+**Before your first build**, set `BATOCERA_SRC` to an explicit,
+space-free path — and, since this repo's own default checkout location
+(`.../Circuit-Sword Batocera/...`) contains a space, and `OUTPUT_DIR`/
+`DL_DIR`/`CCACHE_DIR` default to living under this repo too, override
+their shared parent, `BATOCERA_BUILD_ROOT`, at the same time:
 
 ```bash
 export BATOCERA_SRC=/path/without/spaces/batocera.linux
+export BATOCERA_BUILD_ROOT=/path/without/spaces/batocera-build-root
 ```
 
 Put this in your shell profile, or export it before running any
 `batocera-build/scripts/*.sh` command, or before sourcing `env.sh`
 directly.
 
-**Note — this check covers `BATOCERA_SRC` only.** `env.sh` also derives
-`OUTPUT_DIR`, `DL_DIR`, `CCACHE_DIR`, and `LOG_FILE` from `REPO_ROOT`
-(this repo's own checkout location), not from `BATOCERA_SRC` — so if
-this repo itself lives under a space-containing path, those four still
-silently retain the space even after the `BATOCERA_SRC` check passes.
-In practice this hasn't caused a problem this project has hit: it was
-specifically `BATOCERA_SRC` feeding Buildroot's own `PROJECT_DIR`
-computation that was the landmine, and none of `OUTPUT_DIR`/`DL_DIR`/
-`CCACHE_DIR`/`LOG_FILE` feed that same GNU Make `realpath` codepath. But
-don't assume every path in the build is now space-safe just because a
-build has succeeded — only `BATOCERA_SRC` is actively guarded.
+**`LOG_FILE` is the one path deliberately left unguarded.** It's only
+ever used as a quoted shell redirection target (`> "$LOG_FILE"`), which
+handles spaces fine — there's no GNU Make `realpath` codepath involved,
+so guarding it would be pure friction with no real risk behind it.
 
 ## First-time setup
 

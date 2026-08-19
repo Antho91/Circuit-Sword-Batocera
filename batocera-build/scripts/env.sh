@@ -32,20 +32,25 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # "/Users/bas/Circuit-Sword Batocera" down to "/Users/bas/Circuit-Sword").
 # Fail fast and explicitly instead of letting this corrupt a multi-hour
 # build partway through.
-if [[ "$BATOCERA_SRC" == *" "* ]]; then
-    echo "ERROR: BATOCERA_SRC contains a space: $BATOCERA_SRC" >&2
-    echo "" >&2
-    echo "GNU Make's \$(realpath \$(CURDIR)), used by Buildroot's own" >&2
-    echo "top-level Makefile, silently truncates at the first space in a" >&2
-    echo "path -- this corrupts the build's PROJECT_DIR with no clear" >&2
-    echo "error, deep inside Buildroot, not here." >&2
-    echo "" >&2
-    echo "Fix: set BATOCERA_SRC to an explicit, space-free path before" >&2
-    echo "sourcing this script, e.g.:" >&2
-    echo "  export BATOCERA_SRC=/path/without/spaces/batocera.linux" >&2
-    echo "  source \"\$(dirname \"\$0\")/env.sh\"" >&2
-    exit 1
-fi
+_require_no_space() {
+    local name="$1" value="$2"
+    if [[ "$value" == *" "* ]]; then
+        echo "ERROR: $name contains a space: $value" >&2
+        echo "" >&2
+        echo "GNU Make's \$(realpath \$(CURDIR)), used by Buildroot's own" >&2
+        echo "top-level Makefile, silently truncates at the first space in a" >&2
+        echo "path -- this corrupts the build with no clear error, deep" >&2
+        echo "inside Buildroot, not here." >&2
+        echo "" >&2
+        echo "Fix: set $name to an explicit, space-free path before" >&2
+        echo "sourcing this script, e.g.:" >&2
+        echo "  export $name=/path/without/spaces/..." >&2
+        echo "  source \"\$(dirname \"\$0\")/env.sh\"" >&2
+        exit 1
+    fi
+}
+
+_require_no_space BATOCERA_SRC "$BATOCERA_SRC"
 
 # BR_DOCKER_VOLUMES=1 (default): the actual multi-hundred-GB Buildroot
 # output/downloads/ccache live inside Docker Desktop's own Linux VM as
@@ -69,6 +74,18 @@ export BR_DOCKER_VOLUMES
 : "${OUTPUT_DIR:=$BATOCERA_BUILD_ROOT/output}"
 : "${DL_DIR:=$BATOCERA_BUILD_ROOT/dl}"
 : "${CCACHE_DIR:=$BATOCERA_BUILD_ROOT/buildroot-ccache}"
+
+# These three default from REPO_ROOT (this repo's own checkout
+# location), not BATOCERA_SRC -- guarded separately since a space here
+# is only a defensive precaution (no confirmed failure the way
+# BATOCERA_SRC had one), not a proven landmine, but they're passed to
+# `make` as O=/DL_DIR= command-line variables just like BATOCERA_SRC
+# feeds PROJECT_DIR, so the same GNU Make realpath risk applies in
+# principle. Guarding all four the same way beats leaving three of them
+# silently unguarded.
+_require_no_space OUTPUT_DIR "$OUTPUT_DIR"
+_require_no_space DL_DIR "$DL_DIR"
+_require_no_space CCACHE_DIR "$CCACHE_DIR"
 
 : "${BOARD:=bcm2837}"
 : "${LOG_FILE:=$REPO_ROOT/docs/superpowers/plans/findings/wifi-build.log}"
