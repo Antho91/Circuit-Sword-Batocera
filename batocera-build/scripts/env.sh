@@ -80,12 +80,29 @@ DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-batocera.linux-build}"
 DOCKER_IMAGE="$DOCKER_REPO/$DOCKER_IMAGE_NAME"
 
 # --- Build tuning --------------------------------------------------------
-# BR2_JLEVEL=4 is what was actually used/verified on an 8-core M3 with
-# ~12.5GB allocated to Docker Desktop -- see README.md "Timing" section
-# before raising this. GCC 15 default-behavior changes need the two
-# -Wno-error flags below or several host packages fail to build
-# (see batocera-build/patches/batocera-linux.patch and buildroot.patch).
-export MAKE_OPTS="HOST_CFLAGS='-O2 -std=gnu17 -Wno-error=incompatible-pointer-types -Wno-error=implicit-function-declaration' HOST_CXXFLAGS='-O2' BR2_JLEVEL=4"
+# GCC 15 default-behavior changes need the two -Wno-error flags below or
+# several host packages fail to build (host-yasm's use of `false`/`true`
+# as enum members, for example, breaks under GCC 15's C23-by-default mode
+# without -std=gnu17). See BUILDING.md's "A known rough edge" section for
+# how this actually gets applied to a build invocation -- it's not enough
+# to export this var, the build-*.sh scripts have to pass it through
+# explicitly as a `make` command-line variable.
+#
+# BR2_JLEVEL is intentionally NOT part of MAKE_OPTS -- it doesn't work
+# there. See BUILDING.md's "Controlling build parallelism" section for
+# why (short version: it only takes effect via a generated batocera.mk,
+# not via MAKE_OPTS/env vars) and the $BR2_JLEVEL default below.
+export MAKE_OPTS="HOST_CFLAGS='-O2 -std=gnu17 -Wno-error=incompatible-pointer-types -Wno-error=implicit-function-declaration' HOST_CXXFLAGS='-O2'"
+
+# BR2_JLEVEL=2 is a safe default verified end-to-end on an 8-core M3 with
+# ~9.7GB allocated to Docker Desktop. Raising this trades RAM headroom
+# for speed; it's safe to raise on a host with more Docker memory to
+# spare, since this project never sets PARALLEL_BUILD=1 (which would also
+# force on BR2_PER_PACKAGE_DIRECTORIES and break incremental resumes --
+# see BUILDING.md). webkitgtk ignores this value either way -- see
+# BUILDING.md's webkitgtk njobs section.
+: "${BR2_JLEVEL:=2}"
+export BR2_JLEVEL
 
 # GNU make/find on macOS (BSD make/find don't work for this build)
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -120,4 +137,29 @@ require_docker() {
         echo "ERROR: Docker is not running." >&2
         exit 1
     fi
+}
+
+# Regenerates $BATOCERA_SRC/batocera.mk with the current $BR2_JLEVEL on
+# every call. This file is how BR2_JLEVEL actually reaches Buildroot's
+# .config -- see BUILDING.md's "Controlling build parallelism" section.
+# It must be regenerated every run because setup-build-tree.sh's
+# `git clean -fdx` wipes it on each re-run of that script.
+sync_batocera_mk() {
+    echo '$(call add-defconfig,BR2_JLEVEL='"$BR2_JLEVEL"')' > "$BATOCERA_SRC/batocera.mk"
+}
+
+# Ensures the BR_DOCKER_VOLUMES=1 named volumes exist and are writable by
+# the non-root build container from their very first use. A freshly
+# Docker-created named volume gets populated (and re-populated, wiping
+# any chmod) from the build image's own contents at that mount path until
+# it has real content of its own -- so a plain `docker volume create` +
+# `chmod` isn't enough; the volume needs an actual file in it first. See
+# BUILDING.md's "Building" section for the failure this avoids.
+seed_docker_volumes() {
+    [ "$BR_DOCKER_VOLUMES" = "1" ] || return 0
+    local vol
+    for vol in batocera-dl batocera-ccache "batocera-output-$BOARD"; do
+        docker volume create "$vol" >/dev/null
+        docker run --rm -v "$vol":/v alpine touch /v/.keep
+    done
 }
