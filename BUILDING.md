@@ -30,6 +30,10 @@ how to actually run a build.
 - **A space-free path for `BATOCERA_SRC`.** See "The space-in-path trap"
   below — this is the single most important thing to get right before
   your first build.
+- **Internet access to pull the `alpine` image** the first time you run
+  `build-image.sh`/`build-kernel.sh` — used by `env.sh`'s
+  `seed_docker_volumes` preflight step. Small (~13MB), one-time, but
+  will fail an offline first build.
 
 ## The space-in-path trap
 
@@ -133,15 +137,22 @@ run either script and it takes a few seconds.
 ```bash
 export BATOCERA_SRC=/path/without/spaces/batocera.linux
 export PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:$PATH"  # macOS only
+source batocera-build/scripts/env.sh  # for $MAKE_OPTS -- see "A known rough edge" below
 
 cd "$BATOCERA_SRC"
-make BR_DOCKER_VOLUMES=1 \
+make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 \
      O=/path/to/output/bcm2837 \
      BR2_EXTERNAL="$BATOCERA_SRC" \
      DL_DIR=/path/to/output/dl \
      BATCH_MODE=1 \
      bcm2837-build
 ```
+
+**If you're invoking `make` directly like this instead of through
+`build-image.sh`, you're also on your own for `BR2_JLEVEL`** (see
+"Controlling build parallelism" below) and for the Docker named-volume
+permission fix (see `env.sh`'s `seed_docker_volumes`, which you'd need
+to call yourself, or just run `build-image.sh` instead).
 
 This is a full image build — expect it to take a long time on a cold
 cache (multiple hours), faster on a warm one. It logs to stdout; for a
@@ -180,7 +191,7 @@ Any package whose source you've edited must be explicitly force-refreshed
 first:
 
 ```bash
-make BR_DOCKER_VOLUMES=1 O=/path/to/output/bcm2837 BR2_EXTERNAL="$BATOCERA_SRC" \
+make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 O=/path/to/output/bcm2837 BR2_EXTERNAL="$BATOCERA_SRC" \
      DL_DIR=/path/to/output/dl PKG=<package-name>-rebuild bcm2837-pkg
 ```
 
@@ -213,7 +224,7 @@ Which variant to use depends on the package:
   patch content silently never applies:
 
   ```bash
-  make BR_DOCKER_VOLUMES=1 O=/path/to/output/bcm2837 BR2_EXTERNAL="$BATOCERA_SRC" \
+  make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 O=/path/to/output/bcm2837 BR2_EXTERNAL="$BATOCERA_SRC" \
        DL_DIR=/path/to/output/dl PKG=<package-name>-dirclean bcm2837-pkg
   # then a normal full build or a plain PKG=<name> bcm2837-pkg rebuild
   ```
@@ -254,7 +265,8 @@ the next section for why and how it's actually controlled.
 ### Controlling build parallelism
 
 `BR2_JLEVEL` does not work via `MAKE_OPTS`, even with the fix above.
-Buildroot's top-level Makefile only turns its internal `$(MAKE_OPTS)`
+`batocera.linux`'s own top-level Makefile (not Buildroot's — a
+different, wrapping Makefile) only turns its internal `$(MAKE_OPTS)`
 into `-j$(MAKE_JLEVEL)` when `PARALLEL_BUILD` is set — and setting
 `PARALLEL_BUILD=1` *also* unconditionally force-enables
 `BR2_PER_PACKAGE_DIRECTORIES=y`, a different Buildroot feature (isolated
@@ -264,6 +276,13 @@ switched to `PARALLEL_BUILD=1` failed with `cmake: No such file or
 directory`, because host tools built under the old shared-directory
 layout are missing from the new per-package paths. This project does
 not set `PARALLEL_BUILD=1` for this reason.
+
+(If you ever do experiment with `PARALLEL_BUILD=1`: passing
+`MAKE_OPTS="$MAKE_OPTS"` on the command line, as the scripts now do,
+overrides the `-j`/`-l` flags that mode's own Makefile logic would
+otherwise append to `MAKE_OPTS` — harmless as long as you're not using
+`PARALLEL_BUILD=1`, since it's not set here, but worth knowing if you
+go there.)
 
 **What actually works**: a `batocera.mk` file at `$BATOCERA_SRC`'s root
 containing `$(call add-defconfig,BR2_JLEVEL=<N>)`. The top-level

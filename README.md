@@ -166,9 +166,14 @@ Batocera specifics — they apply regardless of OS:
    driver (`CONFIG_RTL8723BS=m`), same module name as the RetroPie build,
    so the same option names carry over unchanged — see
    `batocera-build/overlay/`.
-5. **No DispmanX/overlay layer on this hardware's KMS stack.** A HUD or
-   menu cannot draw on top of a running emulator — this is a hardware/
-   kernel-stack limitation, not a software choice.
+5. **An in-game overlay IS possible on this hardware.** An earlier
+   assumption here (no DispmanX/overlay layer, so a HUD couldn't draw
+   over a running emulator) turned out to be specific to the old
+   RetroPie build's bare KMS/DRM stack, not a hardware limitation. This
+   Batocera build runs `labwc` (a wlroots Wayland compositor) as
+   EmulationStation's windowing backend for the whole session, and ships
+   a real in-game overlay (`circuitsword-quickmenu`) built on that —
+   see `CLAUDE.md`'s hard rules for the full correction and history.
 
 Full details: [`CLAUDE.md`](CLAUDE.md).
 
@@ -180,18 +185,14 @@ on Linux/WSL2 (untested end-to-end — see
 `docs/superpowers/plans/reference/WINDOWS-WSL2-MIGRATION.md` for a partial migration
 checklist written mid-build).
 
-### Requirements
+### Requirements, timing, and the actual build workflow
 
-| Resource | Minimum observed to work | Notes |
-|---|---|---|
-| Disk space | ~160GB free | Grew from 80GB → 158GB over the course of one build as more packages were added/rebuilt. Budget for 170GB+ to have headroom. |
-| RAM (Docker allocation) | ~12.5GB | Increased twice during the build (7.75 → 10.69 → 12.65GB) to clear OOM-adjacent stalls; more headroom likely helps. |
-| CPU | 8 cores (Apple M3) used here | `BR2_JLEVEL=4` was used throughout — higher levels were not tested and may need more RAM. |
-
-### Timing
-
-Built on a **MacBook, Apple M3, 8 cores, 16GB unified memory**, Docker
-Desktop with gRPC-FUSE file sharing.
+See **[`BUILDING.md`](BUILDING.md)** for current, verified Prerequisites
+(disk space, Docker RAM/CPU allocation) and Timing numbers — a real,
+from-scratch cold-cache build was timed end-to-end (~32h on an 8-core
+Apple Silicon Mac; see BUILDING.md for the full breakdown and speedup
+recommendations), superseding any number that used to live in this
+section.
 
 - **First-time bring-up build (this project's actual history):** the
   build ran from 2026-07-29 to 2026-08-04 — about 6 calendar days
@@ -203,22 +204,16 @@ Desktop with gRPC-FUSE file sharing.
   submodule prompt, a deterministic I/O error in the final image-write
   step). All of those fixes are now baked into the patch set above, so a
   fresh clone with the patches already applied should not hit them again.
-- **Incremental rebuild (small config-only change, ccache warm):**
-  currently running as of this writing — will update this section with
-  the actual duration once it completes.
-- **True from-scratch build time with all patches pre-applied** (no
-  debugging needed) has not been measured yet. Treat any number here as
-  unverified until a clean run is timed end-to-end; do not assume it will
-  be short — this is still hundreds of Buildroot packages cross-compiling
-  for aarch64 inside Docker on a 1GB-RAM-target/8-core-host split.
 
 ### Build command
 
-See "Reproducing the build" above — `batocera-build/scripts/setup-disk-image.sh`
-+ `setup-build-tree.sh` once, then `build-image.sh` /
-`build-kernel.sh` / `build-wifi.sh` per change. Those scripts are the
-source of truth for the exact invocation (env vars, flags, disk-image
-setup); this section intentionally doesn't duplicate it.
+See **[`BUILDING.md`](BUILDING.md)** for the actual day-to-day build
+workflow (prerequisites, first-time setup, the exact commands, and the
+non-obvious traps this project has hit) — that document, not this
+README, is the source of truth for how to actually run a build.
+Short version: `batocera-build/scripts/setup-disk-image.sh` +
+`setup-build-tree.sh` once, then `build-image.sh` / `build-kernel.sh` /
+`build-wifi.sh` per change.
 
 Full troubleshooting history (every error hit and its fix) is in
 `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.

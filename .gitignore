@@ -12,7 +12,7 @@ batocera-build/*.dmg
 Retropie_source/output/
 
 # Build logs.
-docs/superpowers/plans/*.log
+docs/superpowers/plans/**/*.log
 
 # Never commit filled-in WiFi credentials.
 batocera.conf

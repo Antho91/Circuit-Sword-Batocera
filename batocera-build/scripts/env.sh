@@ -150,16 +150,20 @@ sync_batocera_mk() {
 
 # Ensures the BR_DOCKER_VOLUMES=1 named volumes exist and are writable by
 # the non-root build container from their very first use. A freshly
-# Docker-created named volume gets populated (and re-populated, wiping
-# any chmod) from the build image's own contents at that mount path until
-# it has real content of its own -- so a plain `docker volume create` +
-# `chmod` isn't enough; the volume needs an actual file in it first. See
-# BUILDING.md's "Building" section for the failure this avoids.
+# Docker-created named volume is owned by root, and Docker's own
+# populate-on-first-use behavior re-populates (and re-roots) it from the
+# build image's contents at that mount path for as long as it's "empty" --
+# so both a chown AND a real file are needed, in that order, or the
+# container's non-root user (docker.mk's `-u $(UID):$(GID)`) still can't
+# write to it. Volume names must match docker.mk's own DOCKER_VOL_DL/
+# DOCKER_VOL_CCACHE/DOCKER_VOL_OUTPUT (which default to batocera-dl,
+# batocera-ccache, batocera-output-$BOARD but are override-able) -- if
+# you've overridden those for docker.mk, override them identically here.
 seed_docker_volumes() {
     [ "$BR_DOCKER_VOLUMES" = "1" ] || return 0
     local vol
-    for vol in batocera-dl batocera-ccache "batocera-output-$BOARD"; do
+    for vol in "${DOCKER_VOL_DL:-batocera-dl}" "${DOCKER_VOL_CCACHE:-batocera-ccache}" "${DOCKER_VOL_OUTPUT:-batocera-output-$BOARD}"; do
         docker volume create "$vol" >/dev/null
-        docker run --rm -v "$vol":/v alpine touch /v/.keep
+        docker run --rm -v "$vol":/v alpine sh -c "chown $(id -u):$(id -g) /v && touch /v/.keep"
     done
 }
