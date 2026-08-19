@@ -138,6 +138,11 @@ run either script and it takes a few seconds.
 export BATOCERA_SRC=/path/without/spaces/batocera.linux
 export PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:$PATH"  # macOS only
 source batocera-build/scripts/env.sh  # for $MAKE_OPTS -- see "A known rough edge" below
+# ^ run from this repo's root -- env.sh sets -euo pipefail and can exit
+#   your shell outright if BATOCERA_SRC contains a space (it checks for
+#   exactly that, see "The space-in-path trap" above); a plain-BATOCERA_SRC
+#   example like this one won't hit it, but keep that in mind before
+#   sourcing it into a shell you care about keeping open.
 
 cd "$BATOCERA_SRC"
 make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 \
