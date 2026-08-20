@@ -471,6 +471,23 @@ index 0000000000..714906267b
 + 	// Overclock choice
 + 	if (ApiSystem::getInstance()->isScriptingSupported(ApiSystem::OVERCLOCK))
 + 	{
+diff --git a/package/batocera/emulationstation/batocera-emulationstation/005-default-battery-icon-only.patch b/package/batocera/emulationstation/batocera-emulationstation/005-default-battery-icon-only.patch
+new file mode 100644
+index 0000000000..4a236641fd
+--- /dev/null
++++ b/package/batocera/emulationstation/batocera-emulationstation/005-default-battery-icon-only.patch
+@@ -0,0 +1,11 @@
++--- a/es-core/src/Settings.cpp
+++++ b/es-core/src/Settings.cpp
++@@ -193,7 +193,7 @@
++ 	mBoolMap["QuickSystemSelect"] = true;
++ 	mBoolMap["MoveCarousel"] = true;
++ 	mBoolMap["SaveGamelistsOnExit"] = true;
++-	mStringMap["ShowBattery"] = "text";
+++	mStringMap["ShowBattery"] = "icon";
++ 	mBoolMap["CheckBiosesAtLaunch"] = true;
++ 	mBoolMap["RemoveMultiDiskContent"] = true;
++ 	mBoolMap["PackGamelists"] = false;
 diff --git a/package/batocera/emulationstation/batocera-emulationstation/batocera-emulationstation.mk b/package/batocera/emulationstation/batocera-emulationstation/batocera-emulationstation.mk
 index 52d8232ed8..11982d445e 100644
 --- a/package/batocera/emulationstation/batocera-emulationstation/batocera-emulationstation.mk
