@@ -6094,12 +6094,12 @@ index 0000000000..d43f22d470
 +$(eval $(generic-package))
 diff --git a/package/batocera/utils/circuitsword-statusbar/sb_render.c b/package/batocera/utils/circuitsword-statusbar/sb_render.c
 new file mode 100644
-index 0000000000..f24b4a1248
+index 0000000000..b3d231e099
 --- /dev/null
 +++ b/package/batocera/utils/circuitsword-statusbar/sb_render.c
 @@ -0,0 +1,44 @@
-+/* Pure drawing for circuitsword-statusbar: battery, WiFi, volume laid out
-+ * right-to-left across a thin top bar, anchored to the right edge (per
++/* Pure drawing for circuitsword-statusbar: volume, WiFi, battery laid out
++ * left-to-right across a thin top bar, anchored to the right edge (per
 + * on-device feedback: the icons sat on the left, unlike the rest of this
 + * project's overlays; brightness was dropped since it duplicates the
 + * MODE+Left/Right hardware combo's own on-screen feedback and just
@@ -6133,14 +6133,14 @@ index 0000000000..f24b4a1248
 +    int y = ((int)fb->height - QM_ICON_SIZE) / 2;
 +    int x = (int)fb->width - margin - row_w;
 +
-+    qm_draw_icon_rgba(fb, x, y, qm_battery_icon_kind(battery_percent, battery_charging),
-+                       QM_COLOR_FG);
++    qm_draw_icon_rgba(fb, x, y, qm_volume_icon_kind(volume), QM_COLOR_FG);
 +    x += QM_ICON_SIZE + gap;
 +
 +    qm_draw_icon_rgba(fb, x, y, QM_ICON_WIFI, wifi_on ? QM_COLOR_FG : QM_COLOR_DIM);
 +    x += QM_ICON_SIZE + gap;
 +
-+    qm_draw_icon_rgba(fb, x, y, qm_volume_icon_kind(volume), QM_COLOR_FG);
++    qm_draw_icon_rgba(fb, x, y, qm_battery_icon_kind(battery_percent, battery_charging),
++                       QM_COLOR_FG);
 +}
 diff --git a/package/batocera/utils/circuitsword-statusbar/sb_wl.c b/package/batocera/utils/circuitsword-statusbar/sb_wl.c
 new file mode 100644
