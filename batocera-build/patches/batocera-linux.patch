@@ -5994,7 +5994,7 @@ index 0000000000..945dab9112
 +#endif /* QUICKMENU_H */
 diff --git a/package/batocera/utils/circuitsword-statusbar/Config.in b/package/batocera/utils/circuitsword-statusbar/Config.in
 new file mode 100644
-index 0000000000..55b49def2f
+index 0000000000..542bf84d65
 --- /dev/null
 +++ b/package/batocera/utils/circuitsword-statusbar/Config.in
 @@ -0,0 +1,15 @@
@@ -6003,8 +6003,8 @@ index 0000000000..55b49def2f
 +	depends on BR2_PACKAGE_WAYLAND
 +	select BR2_PACKAGE_WAYLAND_PROTOCOLS
 +	help
-+	  Permanent, passive in-game status bar (battery, WiFi, volume,
-+	  brightness) for the Circuit-Sword. Draws a top-anchored
++	  Permanent, passive in-game status bar (battery, WiFi, volume)
++	  for the Circuit-Sword. Draws a top-anchored
 +	  overlay-layer Wayland surface (wlr-layer-shell-unstable-v1) on
 +	  top of the running emulator via labwc, for as long as a game is
 +	  running. Never grabs input and never pauses the game -- purely
@@ -6541,17 +6541,18 @@ index 0000000000..d1d3e411a9
 +}
 diff --git a/package/batocera/utils/circuitsword-statusbar/statusbar.c b/package/batocera/utils/circuitsword-statusbar/statusbar.c
 new file mode 100644
-index 0000000000..bcf2bd8387
+index 0000000000..8c7ef285b1
 --- /dev/null
 +++ b/package/batocera/utils/circuitsword-statusbar/statusbar.c
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,97 @@
 +/* circuitsword-statusbar: permanent, passive top bar for the Circuit-Sword.
 + *
 + * Launched by rpi-circuitsword.py's statusbar_thread whenever a game is
 + * running, killed when it exits (see statusbar_tick() in that file).
-+ * Draws battery/WiFi/volume/brightness on a top-anchored Wayland
-+ * overlay-layer surface. Never grabs input, never pauses anything -- the
-+ * game underneath stays fully playable the entire time this runs.
++ * Draws battery/WiFi/volume on a top-anchored Wayland overlay-layer
++ * surface (brightness is deliberately not drawn -- see sb_render.c).
++ * Never grabs input, never pauses anything -- the game underneath stays
++ * fully playable the entire time this runs.
 + *
 + * Exit codes: 0 = normal (SIGTERM/SIGINT handled, or the compositor
 + * closed our surface). 3 = could not open the Wayland surface at all
@@ -6564,9 +6565,9 @@ index 0000000000..bcf2bd8387
 +#include <stdio.h>
 +#include <stdlib.h>
 +
-+/* Poll/redraw-on-change cadence. None of battery/WiFi/volume/brightness
-+ * change fast enough to need anything tighter -- unlike quickmenu's
-+ * input-driven 100ms pump, there is no interactivity to be responsive to. */
++/* Poll/redraw-on-change cadence. None of battery/WiFi/volume change fast
++ * enough to need anything tighter -- unlike quickmenu's input-driven
++ * 100ms pump, there is no interactivity to be responsive to. */
 +#define SB_POLL_INTERVAL_MS 2000
 +
 +static volatile sig_atomic_t sb_quit = 0;
@@ -6596,8 +6597,9 @@ index 0000000000..bcf2bd8387
 +    if (wifi_on < 0) wifi_on = 0;
 +    int volume = qm_volume_get();
 +    if (volume < 0) volume = 0;
-+    int brightness = qm_brightness_get();
-+    if (brightness < 0) brightness = 0;
++    /* sb_render() never draws brightness (see its own header comment) --
++     * not polled here, just passed through as an ignored 0. */
++    const int brightness = 0;
 +    int battery_percent = 50, battery_charging = 0;
 +    qm_battery_get(&battery_percent, &battery_charging);
 +
@@ -6619,19 +6621,15 @@ index 0000000000..bcf2bd8387
 +        if (new_wifi < 0) new_wifi = wifi_on;
 +        int new_volume = qm_volume_get();
 +        if (new_volume < 0) new_volume = volume;
-+        int new_brightness = qm_brightness_get();
-+        if (new_brightness < 0) new_brightness = brightness;
 +        int new_battery_percent = battery_percent, new_battery_charging = battery_charging;
 +        qm_battery_get(&new_battery_percent, &new_battery_charging);
 +
 +        int dirty = (new_wifi != wifi_on) || (new_volume != volume) ||
-+                    (new_brightness != brightness) ||
 +                    (new_battery_percent != battery_percent) ||
 +                    (new_battery_charging != battery_charging);
 +
 +        wifi_on = new_wifi;
 +        volume = new_volume;
-+        brightness = new_brightness;
 +        battery_percent = new_battery_percent;
 +        battery_charging = new_battery_charging;
 +
