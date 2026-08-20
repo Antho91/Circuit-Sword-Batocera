@@ -80,6 +80,95 @@ check "$got" "42" "set rewrites the target key"
 received=$(cat "$TMPDIR/received.txt")
 check "$received" "RELOAD_CONFIG" "set pings RELOAD_CONFIG on the socket"
 
+# --- joystick-status: sends STATUS, returns the raw reply ---
+python3 -c "
+import socket, os
+sock_path = '$SOCK_PATH'
+if os.path.exists(sock_path):
+    os.remove(sock_path)
+srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+srv.bind(sock_path)
+srv.listen(1)
+srv.settimeout(5.0)
+conn, _ = srv.accept()
+data = conn.recv(64)
+conn.sendall(b'001100\n')
+conn.close()
+with open('$TMPDIR/received.txt', 'wb') as f:
+    f.write(data)
+" &
+STUB_PID=$!
+sleep 0.3
+
+status=$(SOCK_PATH="$SOCK_PATH" "$SCRIPT" joystick-status)
+wait "$STUB_PID"
+check "$status" "001100" "joystick-status returns the daemon's reply"
+
+received=$(cat "$TMPDIR/received.txt")
+check "$received" "STATUS" "joystick-status sends STATUS on the socket"
+
+# --- joystick-cmd: rejects an unknown command without touching the socket ---
+if SOCK_PATH="$TMPDIR/no-such.sock" "$SCRIPT" joystick-cmd BOGUS 2>/dev/null; then
+    check "exit 0" "exit 2" "joystick-cmd rejects an unknown command"
+else
+    check "ok" "ok" "joystick-cmd rejects an unknown command"
+fi
+
+# --- joystick-cmd: sends the requested command, succeeds on "OK" ---
+python3 -c "
+import socket, os
+sock_path = '$SOCK_PATH'
+if os.path.exists(sock_path):
+    os.remove(sock_path)
+srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+srv.bind(sock_path)
+srv.listen(1)
+srv.settimeout(5.0)
+conn, _ = srv.accept()
+data = conn.recv(64)
+conn.sendall(b'OK\n')
+conn.close()
+with open('$TMPDIR/received.txt', 'wb') as f:
+    f.write(data)
+" &
+STUB_PID=$!
+sleep 0.3
+
+if SOCK_PATH="$SOCK_PATH" "$SCRIPT" joystick-cmd INVERT_J1X; then
+    check "exit 0" "exit 0" "joystick-cmd succeeds on OK reply"
+else
+    check "exit 1" "exit 0" "joystick-cmd succeeds on OK reply"
+fi
+wait "$STUB_PID"
+
+received=$(cat "$TMPDIR/received.txt")
+check "$received" "INVERT_J1X" "joystick-cmd sends the exact requested command"
+
+# --- joystick-cmd: fails when the daemon replies with an error ---
+python3 -c "
+import socket, os
+sock_path = '$SOCK_PATH'
+if os.path.exists(sock_path):
+    os.remove(sock_path)
+srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+srv.bind(sock_path)
+srv.listen(1)
+srv.settimeout(5.0)
+conn, _ = srv.accept()
+conn.recv(64)
+conn.sendall(b'ERR failed\n')
+conn.close()
+" &
+STUB_PID=$!
+sleep 0.3
+
+if SOCK_PATH="$SOCK_PATH" "$SCRIPT" joystick-cmd CALIBRATE 2>/dev/null; then
+    check "exit 0" "exit 1" "joystick-cmd fails on ERR reply"
+else
+    check "ok" "ok" "joystick-cmd fails on ERR reply"
+fi
+wait "$STUB_PID"
+
 echo ""
 echo "$([ "$failures" -eq 0 ] && echo PASSED || echo FAILED) ($failures failures)"
 [ "$failures" -eq 0 ]
