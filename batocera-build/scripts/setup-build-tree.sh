@@ -1,10 +1,21 @@
 #!/bin/bash
-# One-time: clone batocera.linux at the pinned commit, apply this
-# project's local patches, and drop in the Circuit-Sword-specific
-# overlay files (WiFi stability configs). Safe to re-run -- it detects
-# an existing checkout and just re-applies patches on top after
-# resetting to the pinned commit (so a botched local edit doesn't
-# silently persist across a re-run).
+# Corrected 2026-08-22: this script is NOT needed for normal setup
+# anymore. batocera-build/build/batocera.linux (the full buildable
+# dev-tree, buildroot included as plain files) is tracked directly in
+# this repo now -- a plain `git clone` of this repo already gives you
+# everything, ready to build. batocera-build/patches/ +
+# batocera-build/overlay/ are kept only as a legacy record of what's
+# inside that tree, not the source of truth anymore.
+#
+# This script now exists purely as a disaster-recovery / verification
+# tool: rebuild a *fresh, standalone* checkout from those patch files
+# in a scratch location outside this repo, e.g. to confirm the patches
+# still apply cleanly against upstream after upstream has moved on.
+# It refuses to run against this repo's own $BATOCERA_SRC (the default)
+# -- that path holds real, committed history now, not a disposable
+# checkout, and this script's whole model (reset + git-clean + re-apply
+# patches) would destroy it. You must explicitly point BATOCERA_SRC
+# somewhere else to use this script at all.
 set -euo pipefail
 cd "$(dirname "$0")"
 source ./env.sh
@@ -17,32 +28,20 @@ source "$PINNED"
 
 echo "=== batocera.linux checkout: $BATOCERA_SRC ==="
 
-# Safety guard: this checkout is meant to be disposable (this script's
-# whole model is "reset to the pinned commit, re-apply patches"), so a
-# real, committed development history here -- not just uncommitted
-# patch-applied working-tree changes -- means this is NOT the checkout
-# this script thinks it is. Re-running against one would silently
-# detach HEAD and git-clean away every one of those commits. Detect it
-# by checking whether HEAD has any commits beyond the pinned commit
-# (patch-apply via `git apply` never creates commits, so a genuine
-# disposable checkout always sits exactly at the pinned commit).
-if [ -d "$BATOCERA_SRC/.git" ] && [ "${FORCE_SETUP_BUILD_TREE:-}" != "1" ]; then
-    (cd "$BATOCERA_SRC" && git fetch origin "$BATOCERA_LINUX_COMMIT" >/dev/null 2>&1 || true)
-    AHEAD_COMMITS=$(cd "$BATOCERA_SRC" && git rev-list --count "$BATOCERA_LINUX_COMMIT..HEAD" 2>/dev/null || echo "?")
-    if [ "$AHEAD_COMMITS" != "0" ] && [ "$AHEAD_COMMITS" != "?" ]; then
-        echo "ERROR: $BATOCERA_SRC has $AHEAD_COMMITS real commit(s) beyond" >&2
-        echo "the pinned commit ($BATOCERA_LINUX_COMMIT) -- this looks like a" >&2
-        echo "genuine development history, not a disposable patch-applied" >&2
-        echo "checkout. Running this script would git-clean and reset-away" >&2
-        echo "that history." >&2
-        echo "" >&2
-        echo "If this is really the dev-tree you mean to regenerate from" >&2
-        echo "scratch (its history already captured elsewhere, e.g. pushed" >&2
-        echo "to a remote, or you've confirmed batocera-linux.patch already" >&2
-        echo "reflects everything you need), re-run with:" >&2
-        echo "  FORCE_SETUP_BUILD_TREE=1 $0" >&2
-        exit 1
-    fi
+DEFAULT_BATOCERA_SRC="$REPO_ROOT/batocera-build/build/batocera.linux"
+if [ "$BATOCERA_SRC" = "$DEFAULT_BATOCERA_SRC" ]; then
+    echo "ERROR: BATOCERA_SRC is this repo's own default dev-tree location" >&2
+    echo "($DEFAULT_BATOCERA_SRC)." >&2
+    echo "That directory holds real, committed project history now (git" >&2
+    echo "log it yourself to see) -- it's not a disposable checkout, and" >&2
+    echo "this script's model (reset to the pinned commit + git-clean +" >&2
+    echo "re-apply patches) would destroy that history." >&2
+    echo "" >&2
+    echo "This script is only for rebuilding a fresh, standalone checkout" >&2
+    echo "elsewhere, e.g. to verify the patch files still apply cleanly:" >&2
+    echo "  export BATOCERA_SRC=/path/outside/this/repo/batocera.linux" >&2
+    echo "  $0" >&2
+    exit 1
 fi
 
 if [ ! -d "$BATOCERA_SRC/.git" ]; then

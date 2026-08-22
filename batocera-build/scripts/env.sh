@@ -127,7 +127,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 require_src() {
-    if [ ! -d "$BATOCERA_SRC/.git" ]; then
+    # Corrected 2026-08-22: $BATOCERA_SRC is no longer its own nested git
+    # checkout (it's folded directly into this repo via `git subtree`,
+    # buildroot flattened from a submodule into plain files) -- so a
+    # "$BATOCERA_SRC/.git" check would always fail now. Check for a real,
+    # known file from the tree instead.
+    if [ ! -f "$BATOCERA_SRC/Makefile" ] || [ ! -d "$BATOCERA_SRC/buildroot" ]; then
         echo "ERROR: $BATOCERA_SRC is not a batocera.linux checkout." >&2
         echo "Run batocera-build/scripts/setup-build-tree.sh first, or set BATOCERA_SRC." >&2
         exit 1
