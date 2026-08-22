@@ -1,0 +1,13 @@
+# Repo-wide shellcheck config for CI (.github/workflows/lint.yml).
+#
+# Only muted here: purely informational codes about shellcheck's static
+# analysis not being able to follow dynamic/relative `source` targets --
+# every script in batocera-build/scripts/ sources `./env.sh` relative to
+# its own directory, and setup-build-tree.sh sources a path read from
+# PINNED_COMMITS.txt. Neither is a bug; shellcheck just can't resolve
+# either at analysis time. Real correctness findings (quoting, unused
+# vars, etc.) are fixed in the scripts themselves or suppressed inline
+# with a `# shellcheck disable=...` comment plus a one-line reason, never
+# muted globally here.
+disable=SC1091
+disable=SC1090

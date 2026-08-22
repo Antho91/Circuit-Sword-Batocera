@@ -1,0 +1,58 @@
+# ============================================================================
+# lint.yml -- static analysis for this repo's own shell-script surface.
+#
+# Purpose:
+#   * shellcheck every tracked *.sh EXCEPT the vendored Batocera/Buildroot
+#     tree (batocera-build/build/batocera.linux/, ~355 upstream scripts we
+#     don't own and don't want to lint or be blocked by).
+#   * actionlint the workflow files themselves.
+#
+# Policy: correctness-class findings are fixed in the scripts (each in its
+# own commit); only noisy/false-positive codes are muted, via .shellcheckrc
+# at the repo root or an inline `# shellcheck disable=...` comment with a
+# one-line reason. See .shellcheckrc for what's muted repo-wide and why.
+# ============================================================================
+name: lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: shellcheck (tracked *.sh, excluding vendored batocera.linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint every tracked shell script we own
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files '*.sh' | grep -v '^batocera-build/build/batocera.linux/')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No shell scripts found -- nothing to lint."; exit 0
+          fi
+          echo "Linting ${#files[@]} script(s):"
+          printf '  %s\n' "${files[@]}"
+          # .shellcheckrc at the repo root is picked up automatically.
+          shellcheck "${files[@]}"
+
+  actionlint:
+    name: actionlint (workflow YAML)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download actionlint
+        run: |
+          set -euo pipefail
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+
+      - name: Run actionlint
+        run: ./actionlint -color

@@ -360,3 +360,21 @@ There is no hardware in CI for this project. Builds/lint/compilation can be
 verified off-device; DRM/KMS behavior, SDIO WiFi stability, Arduino serial
 protocol, GPIO polarities, audio, and first-boot flow all need on-device
 validation on the real Circuit-Sword.
+
+## License and attribution
+
+This repository vendors and patches [Batocera Linux](https://batocera.org/)
+(built on [Buildroot](https://buildroot.org/)), which is licensed under the
+GNU General Public License v2, or (at the licensor's option) any later
+version — see `batocera-build/build/batocera.linux/COPYING`. This project
+exercises that later-version option: the whole repository, including this
+repo's own scripts, patches, and documentation, is distributed under
+**GPLv3** — see [`LICENSE`](LICENSE) — matching the original RetroPie-based
+[Circuit-Sword](https://github.com/Antho91/Circuit-Sword) project this repo
+replaces.
+
+Early in this project, [jecaro/circuix-sword](https://github.com/jecaro/circuix-sword)
+(an independent NixOS-based Circuit-Sword project) was kept as read-only
+reference material and helped inform the WiFi stability fix and some
+DPI/Arduino protocol details — credited here since the reference tree
+itself was later removed once this port had absorbed what it needed.

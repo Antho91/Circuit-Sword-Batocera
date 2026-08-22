@@ -91,6 +91,7 @@ export OUTPUT_DIR DL_DIR CCACHE_DIR
 
 DOCKER_REPO="${DOCKER_REPO:-batoceralinux}"
 DOCKER_IMAGE_NAME="${DOCKER_IMAGE_NAME:-batocera.linux-build}"
+# shellcheck disable=SC2034 # used by extract-artifacts.sh after sourcing this file
 DOCKER_IMAGE="$DOCKER_REPO/$DOCKER_IMAGE_NAME"
 
 # --- Build tuning --------------------------------------------------------
@@ -167,6 +168,7 @@ require_docker() {
 # tree, which is tracked directly in this repo), so nothing persists it
 # between runs on its own -- regenerated fresh every time instead.
 sync_batocera_mk() {
+    # shellcheck disable=SC2016 # single quotes intentional: literal Make syntax, not shell expansion
     echo '$(call add-defconfig,BR2_JLEVEL='"$BR2_JLEVEL"')' > "$BATOCERA_SRC/batocera.mk"
 }
 

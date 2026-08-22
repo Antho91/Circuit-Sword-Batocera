@@ -41,6 +41,7 @@ elif [ -f /usr/include/freetype2/ft2build.h ]; then
 fi
 
 if [ "$HAVE_FREETYPE" = "1" ]; then
+    # shellcheck disable=SC2086 # QM_TTF_CFLAGS/QM_TTF_LIBS intentionally unquoted: multi-flag pkg-config output
     cc -std=gnu99 -O1 -Wall -Wextra -Werror \
        -DQM_NO_MAIN \
        -I"$QM_SRC" $QM_TTF_CFLAGS \
@@ -86,6 +87,7 @@ cc -std=gnu99 -O1 -Wall -Wextra -Werror \
 # test_qm_font -- reuse QM_TTF_CFLAGS/QM_TTF_LIBS/HAVE_FREETYPE. Skip
 # cleanly (not a failure) if none found.
 if [ "$HAVE_FREETYPE" = "1" ]; then
+    # shellcheck disable=SC2086 # QM_TTF_CFLAGS/QM_TTF_LIBS intentionally unquoted: multi-flag pkg-config output
     cc -std=gnu99 -O1 -Wall -Wextra -Werror \
        -I"$QM_SRC" $QM_TTF_CFLAGS \
        "$HERE/test_qm_ttf.c" "$QM_SRC/qm_ttf.c" "$QM_SRC/qm_font.c" "$QM_SRC/qm_icons.c" "$QM_SRC/qm_icon_data.c" \
