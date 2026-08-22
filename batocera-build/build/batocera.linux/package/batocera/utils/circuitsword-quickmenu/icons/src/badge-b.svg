@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Circle badge with a letter-"B"-shaped hole (a vertical stem plus
+       three horizontal bars and two side bumps forming a blocky B), cut
+       from the circle in one compound path via fill-rule="evenodd".
+       No mask element (see badge-a.svg for why). -->
+  <path fill-rule="evenodd" fill="#ffffff" d="
+    M 8,1 A 7,7 0 1,0 8,15 A 7,7 0 1,0 8,1 Z
+    M 5.4,4 L 6.6,4 L 6.6,12 L 5.4,12 Z
+    M 6.6,4 L 10.2,4 L 10.2,5.2 L 6.6,5.2 Z
+    M 6.6,7.6 L 10.2,7.6 L 10.2,8.8 L 6.6,8.8 Z
+    M 6.6,10.8 L 10.2,10.8 L 10.2,12 L 6.6,12 Z
+    M 9.0,5.2 L 10.2,5.2 L 10.2,7.6 L 9.0,7.6 Z
+    M 9.0,8.8 L 10.2,8.8 L 10.2,10.8 L 9.0,10.8 Z
+  "/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Circle badge with a left-pointing triangle hole. No mask element
+       (see badge-a.svg for why); same triangle geometry as before, now
+       cut directly via fill-rule="evenodd" instead of via a luminance mask. -->
+  <path fill-rule="evenodd" fill="#ffffff" d="
+    M 8,1 A 7,7 0 1,0 8,15 A 7,7 0 1,0 8,1 Z
+    M 9.5,4.5 L 5.5,8 L 9.5,11.5 Z
+  "/>
+</svg>

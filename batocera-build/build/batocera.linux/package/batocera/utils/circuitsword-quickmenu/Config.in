@@ -1,0 +1,15 @@
+config BR2_PACKAGE_CIRCUITSWORD_QUICKMENU
+	bool "circuitsword-quickmenu"
+	depends on BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_WAYLAND_PROTOCOLS
+	select BR2_PACKAGE_FREETYPE
+	help
+	  Standalone in-game quick menu (WiFi toggle, volume, brightness)
+	  for the Circuit-Sword. Draws a full-screen overlay-layer Wayland
+	  surface (wlr-layer-shell-unstable-v1) on top of the running
+	  emulator via labwc, and reads the on-board Arduino Leonardo
+	  joystick via raw evdev. Launched by the rpi-circuitsword.py
+	  daemon on a MODE button press while a game is running.
+
+comment "circuitsword-quickmenu needs wayland"
+	depends on !BR2_PACKAGE_WAYLAND

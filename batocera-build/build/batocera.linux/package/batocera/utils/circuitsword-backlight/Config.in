@@ -1,0 +1,11 @@
+comment "circuitsword-backlight needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
+
+config BR2_PACKAGE_CIRCUITSWORD_BACKLIGHT
+	bool "circuitsword-backlight"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Virtual backlight class device bridging Batocera's native
+	  brightness UI (batocera-brightness, EmulationStation settings) to
+	  the Circuit-Sword's Arduino Leonardo, via the rpi-circuitsword.py
+	  daemon.

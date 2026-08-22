@@ -1,0 +1,4 @@
+# Circuit-Sword default values (Raspberry Pi Compute Module 3 carrier board)
+
+# fan/battery/backlight/safe-shutdown daemon
+system.power.switch=CIRCUITSWORD

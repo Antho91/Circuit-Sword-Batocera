@@ -1,0 +1,196 @@
+#!/bin/sh
+# Shell bridge between EmulationStation's native System Settings screen
+# and the rpi-circuitsword.py daemon, for the 5 Daemon Settings tunables
+# plus the joystick calibration actions -- both also reachable via
+# circuitsword-quickmenu's in-game overlay. See docs/superpowers/specs/
+# 2026-08-13-es-daemon-settings-design.md and 2026-08-06-quickmenu-
+# design.md (joystick socket protocol).
+#
+# Usage:
+#   circuitsword-daemon-config get <key>
+#   circuitsword-daemon-config set <key> <value>
+#   circuitsword-daemon-config joystick-status
+#   circuitsword-daemon-config joystick-cmd <CMD>
+#
+# "get" reads circuitsword.conf, falling back to the daemon's GET_CONFIG
+# socket command (which merges in DEFAULT_CONFIG) when the key isn't in
+# the file yet -- a fresh device with no customized settings must still
+# report real values, not come back empty. "set" writes circuitsword.conf
+# and pings the daemon's RELOAD_CONFIG socket command so the change takes
+# effect immediately. This script does NOT validate or clamp config
+# values -- rpi-circuitsword.py's load_config() is the single source of
+# truth for valid ranges, exactly as it already is for
+# circuitsword-quickmenu's writes.
+#
+# "joystick-status"/"joystick-cmd" talk to the same daemon socket as
+# RELOAD_CONFIG (not a separate connection type) -- see
+# rpi-circuitsword.py's JOYSTICK_COMMANDS/joystick_ipc_thread. joystick-cmd
+# only accepts the daemon's own fixed command set (never passes caller
+# input through to the socket verbatim), since this script's argument
+# ultimately comes from a GUI button press, not trusted input.
+
+set -e
+
+CONFIG_FILE="${CONFIG_FILE:-/userdata/system/configs/circuitsword.conf}"
+SOCK_PATH="${SOCK_PATH:-/var/run/circuitsword-joystick.sock}"
+
+usage() {
+    echo "usage: circuitsword-daemon-config get <key>" >&2
+    echo "       circuitsword-daemon-config set <key> <value>" >&2
+    echo "       circuitsword-daemon-config joystick-status" >&2
+    echo "       circuitsword-daemon-config joystick-cmd <CMD>" >&2
+    exit 2
+}
+
+cmd_get() {
+    key="$1"
+
+    # Fast path: circuitsword.conf only ever gets created by `set` (or by
+    # circuitsword-quickmenu's own writes) -- on a device where this key
+    # has never been changed, the file (or the key's line in it) simply
+    # doesn't exist yet. Last matching, non-comment, non-blank line wins
+    # -- matches rpi-circuitsword.py's load_config() parsing exactly.
+    if [ -f "$CONFIG_FILE" ]; then
+        value=$(grep -E "^${key}=" "$CONFIG_FILE" | tail -n 1 | cut -d= -f2-)
+        if [ -n "$value" ]; then
+            echo "$value"
+            return 0
+        fi
+    fi
+
+    # Fallback: ask the daemon directly via GET_CONFIG. Its own
+    # get_current_config() already merges DEFAULT_CONFIG with whatever's
+    # in the file, so this is the one true source for "what value is
+    # actually in effect right now" -- unlike a bare file read, it never
+    # comes back empty just because nothing has been customized yet.
+    # Without this fallback, EmulationStation's CIRCUITSWORD menu shows
+    # no real default on a fresh device (each row silently falls back to
+    # its own first list entry instead of the daemon's actual default).
+    python3 -c "
+import socket
+import sys
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(5.0)
+    s.connect('$SOCK_PATH')
+    s.sendall(b'GET_CONFIG\n')
+    reply = s.recv(256).strip().decode('ascii', 'replace')
+    s.close()
+except OSError:
+    sys.exit(1)
+
+for pair in reply.split(','):
+    if '=' not in pair:
+        continue
+    k, v = pair.split('=', 1)
+    if k == '$key':
+        sys.stdout.write(v)
+        sys.exit(0)
+sys.exit(1)
+"
+}
+
+cmd_set() {
+    key="$1"
+    value="$2"
+    mkdir -p "$(dirname "$CONFIG_FILE")"
+    touch "$CONFIG_FILE"
+
+    # Rewrite: drop every existing line for this key, then append the new
+    # one. Guarantees a single line per key (load_config() would otherwise
+    # apply "last line wins", which this collapses to trivially) and never
+    # touches any other line, comment, or blank line.
+    tmp_file="${CONFIG_FILE}.tmp.$$"
+    grep -vE "^${key}=" "$CONFIG_FILE" > "$tmp_file" || true
+    echo "${key}=${value}" >> "$tmp_file"
+    mv "$tmp_file" "$CONFIG_FILE"
+
+    # Ping the daemon to pick up the change immediately. python3 is
+    # already a runtime dependency of rpi-circuitsword.py itself, so it's
+    # guaranteed present -- avoids depending on a Unix-socket-capable
+    # `nc` build, which this minimal image may not have.
+    python3 -c "
+import socket
+import sys
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(5.0)
+    s.connect('$SOCK_PATH')
+    s.sendall(b'RELOAD_CONFIG\n')
+    reply = s.recv(64)
+    s.close()
+    sys.exit(0 if reply.strip() == b'OK' else 1)
+except OSError:
+    sys.exit(1)
+"
+}
+
+cmd_joystick_status() {
+    python3 -c "
+import socket
+import sys
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(5.0)
+    s.connect('$SOCK_PATH')
+    s.sendall(b'STATUS\n')
+    reply = s.recv(64).strip()
+    s.close()
+    sys.stdout.write(reply.decode('ascii', 'replace'))
+    sys.exit(0)
+except OSError:
+    sys.exit(1)
+"
+}
+
+cmd_joystick_cmd() {
+    cmd="$1"
+    case "$cmd" in
+        CALIBRATE|INVERT_J1X|INVERT_J1Y|INVERT_J2X|INVERT_J2Y|TOGGLE_J1|TOGGLE_J2)
+            ;;
+        *)
+            echo "circuitsword-daemon-config: unknown joystick command: $cmd" >&2
+            exit 2
+            ;;
+    esac
+    # 16s: covers CALIBRATE's up to ~12s firmware round trip
+    # (JOYSTICK_CALIBRATE_TIMEOUT_S in rpi-circuitsword.py) plus margin.
+    python3 -c "
+import socket
+import sys
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(16.0)
+    s.connect('$SOCK_PATH')
+    s.sendall(b'$cmd\n')
+    reply = s.recv(64)
+    s.close()
+    sys.exit(0 if reply.strip() == b'OK' else 1)
+except OSError:
+    sys.exit(1)
+"
+}
+
+[ $# -ge 1 ] || usage
+
+case "$1" in
+    get)
+        [ $# -eq 2 ] || usage
+        cmd_get "$2"
+        ;;
+    set)
+        [ $# -eq 3 ] || usage
+        cmd_set "$2" "$3"
+        ;;
+    joystick-status)
+        [ $# -eq 1 ] || usage
+        cmd_joystick_status
+        ;;
+    joystick-cmd)
+        [ $# -eq 2 ] || usage
+        cmd_joystick_cmd "$2"
+        ;;
+    *)
+        usage
+        ;;
+esac

@@ -1,0 +1,11 @@
+--- a/es-core/src/Settings.cpp
++++ b/es-core/src/Settings.cpp
+@@ -193,7 +193,7 @@
+ 	mBoolMap["QuickSystemSelect"] = true;
+ 	mBoolMap["MoveCarousel"] = true;
+ 	mBoolMap["SaveGamelistsOnExit"] = true;
+-	mStringMap["ShowBattery"] = "text";
++	mStringMap["ShowBattery"] = "icon";
+ 	mBoolMap["CheckBiosesAtLaunch"] = true;
+ 	mBoolMap["RemoveMultiDiskContent"] = true;
+ 	mBoolMap["PackGamelists"] = false;

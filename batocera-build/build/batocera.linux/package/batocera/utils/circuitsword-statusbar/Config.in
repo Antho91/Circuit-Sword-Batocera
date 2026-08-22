@@ -1,0 +1,15 @@
+config BR2_PACKAGE_CIRCUITSWORD_STATUSBAR
+	bool "circuitsword-statusbar"
+	depends on BR2_PACKAGE_WAYLAND
+	select BR2_PACKAGE_WAYLAND_PROTOCOLS
+	help
+	  Permanent, passive in-game status bar (battery, WiFi, volume)
+	  for the Circuit-Sword. Draws a top-anchored
+	  overlay-layer Wayland surface (wlr-layer-shell-unstable-v1) on
+	  top of the running emulator via labwc, for as long as a game is
+	  running. Never grabs input and never pauses the game -- purely
+	  passive. Launched and killed by the rpi-circuitsword.py daemon's
+	  statusbar_thread as games start/stop.
+
+comment "circuitsword-statusbar needs wayland"
+	depends on !BR2_PACKAGE_WAYLAND
