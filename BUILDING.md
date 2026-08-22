@@ -11,11 +11,12 @@ how to actually run a build.
   Buildroot build (this project's builds have used the default
   `BR_DOCKER_VOLUMES=1` mode — see below — with several CPU cores and
   **~12-13GB RAM** allocated to Docker Desktop if your host has the
-  headroom; a full build is CPU- and memory-hungry. This isn't just a
-  "more is better" number — webkitgtk's own memory-based auto-throttle
-  formula (see "webkitgtk `njobs`" below) computes a safer, faster value
-  at that allocation than it does at a lower one, so this genuinely
-  speeds up the slowest single part of the build, not just adds margin).
+  headroom; a full build is CPU- and memory-hungry). **This raises the
+  ceiling but does not, by itself, make webkitgtk's build step safe** —
+  see "webkitgtk `njobs`" below, which was re-tested at 12.65GB on a
+  16GB host and still OOM'd. Manual `njobs` capping for that one package
+  remains necessary regardless of how much memory you give Docker, at
+  least up to the range this project has actually tested.
 - **~160GB free disk** for a first full build. Measured on an actual
   from-scratch run: `batocera-dl` (package source downloads) ~28GB,
   `batocera-ccache` (compiler cache) ~4.5GB — this grows further with
@@ -310,27 +311,44 @@ create/export this yourself.
 `buildroot/package/webkitgtk/webkitgtk.mk` computes its own `-j` value
 for that one package via a memory-based formula (`njobs :=
 min(total_memory_kb/4 + 1, cpu_threads)`), ignoring `BR2_JLEVEL`/
-`MAKE_JLEVEL` completely. On this project's validation build host
+`MAKE_JLEVEL` completely. On this project's first validation build host
 (~9.7GB allocated to Docker Desktop), this formula's own self-computed
-value still wasn't safe in practice — it took repeated OOM crashes on
+value wasn't safe in practice — it took repeated OOM crashes on
 `GeneratedSerializers.cpp` and other large WebKit translation units
 before manually hardcoding `njobs := 1` for that run.
 
-**This was deliberately left as a manual, host-editable knob — not
-committed as a permanent patch.** The right value is host-RAM-dependent;
-baking in `1` for everyone would needlessly slow down contributors on
-higher-RAM hosts, where the formula's own computed value is more likely
-to actually be safe (see the Prerequisites section's Docker memory
-recommendation — at ~12-13GB, this formula self-computes a higher,
-still-safe value without any manual edit needed).
+**Corrected 2026-08-22 — raising Docker's memory allocation does NOT
+reliably fix this.** An earlier version of this document speculated
+that ~12-13GB would let the formula self-compute a safe, higher value.
+That was re-tested directly: at 12.65GB allocated (out of a 16GB host —
+the most headroom this project's hardware has to give without starving
+macOS itself), the formula computed `njobs=4`, and webkitgtk still
+OOM'd — `Killed signal terminated program cc1plus` partway through
+`WebCore`'s unified sources, which are individually heavy enough that 4
+of them in parallel exceeded 12.65GB. Pushing Docker's allocation
+meaningfully higher than that isn't realistic on a 16GB host. **Treat
+the formula as unsafe on typical contributor hardware and always
+hardcode `njobs := 1` for this package, regardless of Docker memory** —
+this was confirmed to build the rest of the way through cleanly once
+capped.
+
+**This is deliberately left as a manual, host-editable knob — not
+committed as a permanent patch**, since a contributor with genuinely
+large amounts of host RAM to spare (32GB+ hosts giving Docker 20GB+,
+untested by this project) may be able to safely raise it above `1`.
+Nobody should assume that without testing it themselves first, though —
+`njobs := 1` is the only value this project has actually confirmed safe.
 
 If you hit an OOM during the webkitgtk build step: edit
 `$BATOCERA_SRC/buildroot/package/webkitgtk/webkitgtk.mk` directly and
-hardcode a lower `njobs := <N>` for that run. This edit does not need to
-(and should not) be captured in `batocera-linux.patch`/`buildroot.patch`
-— `setup-build-tree.sh` regenerates this file fresh from upstream on
-every run, so a local edit here is exactly as temporary as it needs to
-be.
+hardcode `njobs := 1` (or another value you've verified is safe on your
+own hardware) for that run. This edit does not need to (and should not)
+be captured in `batocera-linux.patch`/`buildroot.patch` —
+`setup-build-tree.sh` regenerates this file fresh from upstream on every
+run, so a local edit here is exactly as temporary as it needs to be. If
+you already have a partially-built webkitgtk from a crashed attempt,
+`PKG=webkitgtk-dirclean` (see "Rebuilding a single package" above)
+before resuming, or the stale build directory won't pick up the edit.
 
 Because webkitgtk protects itself this way regardless of the outer
 `BR2_JLEVEL`, there's no need to wait for it to finish before running
@@ -364,19 +382,24 @@ followed by host-clang/LLVM (single-threaded only because the *whole*
 build was still at outer `BR2_JLEVEL=1` at that point) — this one
 stretch alone was ~44% of the entire Phase 1 duration.
 
-**Speedup recommendations for a future cold build**, both concrete and
-evidence-backed, not just theoretical:
+**Speedup recommendation for a future cold build, evidence-backed by a
+second validation run (see below):**
 
-1. **Set `BR2_JLEVEL=2`+ from the very start**, not partway through as
-   this run did (that mid-build switch was ad-hoc caution, not a
-   required sequencing) — webkitgtk's own hardcoded/formula-driven
-   `njobs` already protects it independent of the outer setting, so
-   there's no reason to wait. This alone would have cut into the Clang
-   portion of the 13.7h stretch above.
-2. **Allocate ~12-13GB to Docker Desktop** if your host has the headroom
-   (see Prerequisites) — this lets webkitgtk's own `njobs` formula
-   self-compute a higher, still-safe value, potentially cutting into the
-   webkitgtk portion of that stretch too, without any manual override.
+**Set `BR2_JLEVEL=2`+ from the very start**, not partway through as this
+run did (that mid-build switch was ad-hoc caution, not a required
+sequencing) — webkitgtk protects itself independent of the outer
+setting (always hardcode its `njobs`, see below), so there's no reason
+to wait. This alone would have cut into the Clang portion of the 13.7h
+stretch above, and was confirmed to hold for a full run in the second
+validation run below.
+
+(An earlier version of this section also recommended raising Docker
+Desktop's memory allocation as a second lever, on the theory that it
+would let webkitgtk's own formula self-compute a safe higher `njobs`.
+That was tested directly and did not hold up — see "webkitgtk `njobs`"
+above and the second validation run below. Memory allocation still
+matters for the build in general, just not as a webkitgtk-specific
+speedup.)
 
 A future contributor following this document (all four bugs above
 already fixed/documented) should expect something close to this ~32h
@@ -384,3 +407,58 @@ figure, likely less with both recommendations applied — and none of the
 additional debugging/interruption time this session spent finding these
 bugs in the first place. Any rebuild after the first is dramatically
 faster via ccache reuse for anything untouched.
+
+### Second validation run (2026-08-20 to 2026-08-22) — speedup tweaks tested
+
+A second genuine cold-cache build (fresh, empty `batocera-dl`/
+`batocera-ccache`/`batocera-output-$BOARD` volumes) was run specifically
+to test the two speedup recommendations above: `BR2_JLEVEL=2` from the
+very start, and raising Docker Desktop's memory to ~12.65GB. **Its
+total wall-clock time is not a usable comparison figure** — the run hit
+four unrelated interruptions, none caused by this project's own code:
+
+- Two dead upstream download mirrors (`libtool` on `ftpmirror.gnu.org`,
+  `pm-utils` on `pm-utils.freedesktop.org`) — both worked around by
+  downloading the exact same tarball from a different host and
+  verifying it against Buildroot's own recorded hash before manually
+  seeding it into the `batocera-dl` volume.
+- A transient git-over-HTTPS TLS failure cloning a `libretro-picodrive`
+  submodule (`miniaudio`) — resolved by simply retrying once network
+  connectivity was reconfirmed.
+- A **multi-day upstream crates.io incident**: the `arrayref` crate
+  (a transitive dependency of `blake3`, needed by `host-cargo-c` for
+  `librsvg`) had every version matching `blake3`'s own version
+  requirement yanked, with no advisory explaining why, coinciding with
+  the crate maintainer's GitHub account being deleted. This fully
+  blocked the build (bumping `host-cargo-c`'s own pinned version did
+  not help — every recent `blake3` release requires the same yanked
+  range) until the yanks were reverted upstream around a day later, at
+  which point the build resumed and passed that step immediately with
+  no changes on this project's side.
+
+**What this run did confirm, on the segments actually measured:**
+
+- **`BR2_JLEVEL=2` from the start**: held for 98%+ of all `make`
+  invocations throughout, confirmed via both the generated `.config`
+  and direct log inspection — this part of the speedup recommendation
+  works exactly as documented.
+- **The Docker-memory recommendation does not hold up** — see the
+  corrected "webkitgtk `njobs`" section above. `njobs := 1` had to be
+  reinstated for that one package even at 12.65GB.
+- **One clean, uninterrupted stretch**: once webkitgtk was capped to
+  `njobs := 1` and its partial build dircleaned, the build ran for
+  **~11 hours continuously** (2026-08-21 14:49 → 2026-08-22 01:50, no
+  crashes, no manual intervention) and got through the remainder of
+  webkitgtk, `qt6declarative`, and a large batch of emulator cores
+  including `mame` — all at `BR2_JLEVEL=2` for every package except
+  webkitgtk itself. This is consistent with the first run's finding
+  that `BR2_JLEVEL=2`-from-the-start meaningfully outperforms starting
+  at `BR2_JLEVEL=1`.
+- The build did complete successfully end-to-end once resumed past the
+  external blockers, producing a verified `batocera-bcm2837-43.1-
+  20260822.img.gz` (checksums and `gzip -t` confirmed).
+
+**Practical takeaway**: use `BR2_JLEVEL=2`+ from the start (confirmed
+real speedup); don't rely on Docker memory alone to make webkitgtk
+safe (confirmed it isn't, at least up to 12.65GB on a 16GB host) —
+always cap `njobs := 1` for that package instead.
