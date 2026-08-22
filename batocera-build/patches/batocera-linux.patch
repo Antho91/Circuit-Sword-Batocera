@@ -7136,10 +7136,10 @@ index a545ab39a4..09bf0bb528 100755
              # This saves having to reboot twice for certain cases
 diff --git a/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config b/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config
 new file mode 100755
-index 0000000000..97704cc79d
+index 0000000000..feba0cec52
 --- /dev/null
 +++ b/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,196 @@
 +#!/bin/sh
 +# Shell bridge between EmulationStation's native System Settings screen
 +# and the rpi-circuitsword.py daemon, for the 5 Daemon Settings tunables
@@ -7154,12 +7154,15 @@ index 0000000000..97704cc79d
 +#   circuitsword-daemon-config joystick-status
 +#   circuitsword-daemon-config joystick-cmd <CMD>
 +#
-+# "get"/"set" read/write circuitsword.conf ("set" also pings the daemon's
-+# RELOAD_CONFIG socket command so the change takes effect immediately).
-+# This script does NOT validate or clamp config values --
-+# rpi-circuitsword.py's load_config() is the single source of truth for
-+# valid ranges, exactly as it already is for circuitsword-quickmenu's
-+# writes.
++# "get" reads circuitsword.conf, falling back to the daemon's GET_CONFIG
++# socket command (which merges in DEFAULT_CONFIG) when the key isn't in
++# the file yet -- a fresh device with no customized settings must still
++# report real values, not come back empty. "set" writes circuitsword.conf
++# and pings the daemon's RELOAD_CONFIG socket command so the change takes
++# effect immediately. This script does NOT validate or clamp config
++# values -- rpi-circuitsword.py's load_config() is the single source of
++# truth for valid ranges, exactly as it already is for
++# circuitsword-quickmenu's writes.
 +#
 +# "joystick-status"/"joystick-cmd" talk to the same daemon socket as
 +# RELOAD_CONFIG (not a separate connection type) -- see
@@ -7183,12 +7186,50 @@ index 0000000000..97704cc79d
 +
 +cmd_get() {
 +    key="$1"
-+    [ -f "$CONFIG_FILE" ] || exit 1
-+    # Last matching, non-comment, non-blank line wins -- matches
-+    # rpi-circuitsword.py's load_config() parsing exactly.
-+    value=$(grep -E "^${key}=" "$CONFIG_FILE" | tail -n 1 | cut -d= -f2-)
-+    [ -n "$value" ] || exit 1
-+    echo "$value"
++
++    # Fast path: circuitsword.conf only ever gets created by `set` (or by
++    # circuitsword-quickmenu's own writes) -- on a device where this key
++    # has never been changed, the file (or the key's line in it) simply
++    # doesn't exist yet. Last matching, non-comment, non-blank line wins
++    # -- matches rpi-circuitsword.py's load_config() parsing exactly.
++    if [ -f "$CONFIG_FILE" ]; then
++        value=$(grep -E "^${key}=" "$CONFIG_FILE" | tail -n 1 | cut -d= -f2-)
++        if [ -n "$value" ]; then
++            echo "$value"
++            return 0
++        fi
++    fi
++
++    # Fallback: ask the daemon directly via GET_CONFIG. Its own
++    # get_current_config() already merges DEFAULT_CONFIG with whatever's
++    # in the file, so this is the one true source for "what value is
++    # actually in effect right now" -- unlike a bare file read, it never
++    # comes back empty just because nothing has been customized yet.
++    # Without this fallback, EmulationStation's CIRCUITSWORD menu shows
++    # no real default on a fresh device (each row silently falls back to
++    # its own first list entry instead of the daemon's actual default).
++    python3 -c "
++import socket
++import sys
++try:
++    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
++    s.settimeout(5.0)
++    s.connect('$SOCK_PATH')
++    s.sendall(b'GET_CONFIG\n')
++    reply = s.recv(256).strip().decode('ascii', 'replace')
++    s.close()
++except OSError:
++    sys.exit(1)
++
++for pair in reply.split(','):
++    if '=' not in pair:
++        continue
++    k, v = pair.split('=', 1)
++    if k == '$key':
++        sys.stdout.write(v)
++        sys.exit(0)
++sys.exit(1)
++"
 +}
 +
 +cmd_set() {

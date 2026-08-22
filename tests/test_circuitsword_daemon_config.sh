@@ -28,13 +28,40 @@ check() {
     fi
 }
 
-# --- get: key not present in a fresh/missing file -> exit 1, no output ---
+# --- get: key not present in a fresh/missing file AND no daemon socket
+# to fall back to -> exit 1, no output ---
 rm -f "$CONFIG_FILE"
 if CONFIG_FILE="$CONFIG_FILE" SOCK_PATH="$SOCK_PATH" "$SCRIPT" get fan_on_temp 2>/dev/null; then
-    check "exit 0" "exit 1" "get on missing file fails"
+    check "exit 0" "exit 1" "get on missing file and no daemon fails"
 else
-    check "ok" "ok" "get on missing file fails"
+    check "ok" "ok" "get on missing file and no daemon fails"
 fi
+
+# --- get: key not in the file, but the daemon's GET_CONFIG reply has it
+# -> falls back to the daemon instead of failing (this is the fix for a
+# fresh device showing no defaults in the CIRCUITSWORD menu until a
+# setting is touched once) ---
+python3 -c "
+import socket, os
+sock_path = '$SOCK_PATH'
+if os.path.exists(sock_path):
+    os.remove(sock_path)
+srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+srv.bind(sock_path)
+srv.listen(1)
+srv.settimeout(5.0)
+conn, _ = srv.accept()
+conn.recv(64)
+conn.sendall(b'fan_on_temp=58.0,fan_off_temp=50.0,fan_poll_interval_s=3,switch_debounce_ms=800,fan_on=0,fan_enabled=1\n')
+conn.close()
+" &
+STUB_PID=$!
+sleep 0.3
+
+rm -f "$CONFIG_FILE"
+got=$(CONFIG_FILE="$CONFIG_FILE" SOCK_PATH="$SOCK_PATH" "$SCRIPT" get fan_on_temp)
+wait "$STUB_PID"
+check "$got" "58.0" "get falls back to daemon's GET_CONFIG when the file has nothing"
 
 # --- set: appends a new key on first write ---
 # (socket ping will fail since no daemon is listening -- test set's file
