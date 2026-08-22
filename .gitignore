@@ -1,7 +1,9 @@
-# Batocera build tree: regenerable via batocera-build/scripts/setup-build-tree.sh
-# (a full git clone of batocera-linux/batocera.linux + submodule -- large,
-# and the patches/ + overlay/ directories are the actual source of truth).
-batocera-build/build/
+# Corrected 2026-08-22: batocera-build/build/batocera.linux is now
+# tracked directly in this repo (folded in via `git subtree`, buildroot
+# flattened from a submodule into plain files) -- it's the actual
+# buildable source tree, not a disposable checkout. batocera-build/
+# patches/ + overlay/ are kept as a legacy record of what's inside it,
+# not the source of truth anymore.
 batocera-build/*.dmg
 
 # Build output/downloads/ccache: regenerable, multi-hundred-GB working set.
