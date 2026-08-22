@@ -1,0 +1,198 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 530eed5b8..784d76622 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -9,6 +9,7 @@ option(BCM "BCM host" OFF)
+ 
+ option(BATOCERA "Set to ON to enable BATOCERA specific code" OFF)
+ option(RETROBAT "Set to ON to enable RETROBAT specific code" OFF)
++option(CIRCUITSWORD "Set to ON to enable CIRCUITSWORD specific code" OFF)
+ 
+ option(ENABLE_FILEMANAGER "Set to ON to enable f1 shortcut for filesystem" OFF)
+ option(DISABLE_KODI "Set to ON to disable kodi in menu" OFF)
+@@ -96,6 +97,11 @@ if(BATOCERA)
+   add_definitions(-DBATOCERA)
+ endif()
+ 
++if(CIRCUITSWORD)
++  MESSAGE("CircuitSword build")
++  add_definitions(-DCIRCUITSWORD)
++endif()
++
+ if(RETROBAT)
+   MESSAGE("Retrobat build")
+   add_definitions(-DRETROBAT)
+diff --git a/es-app/src/ApiSystem.cpp b/es-app/src/ApiSystem.cpp
+index 819515362..f1b6cf585 100644
+--- a/es-app/src/ApiSystem.cpp
++++ b/es-app/src/ApiSystem.cpp
+@@ -695,6 +695,33 @@ bool ApiSystem::setPowerLedGameForce(std::string selected)
+ 	return executeScript("batocera-gameforce powerLed " + selected);
+ }
+ 
++std::string ApiSystem::getCircuitSwordDaemonConfig(const std::string& key)
++{
++	LOG(LogDebug) << "ApiSystem::getCircuitSwordDaemonConfig";
++
++	std::ostringstream oss;
++	oss << "circuitsword-daemon-config get " << key;
++	FILE *pipe = popen(oss.str().c_str(), "r");
++	char line[1024];
++
++	if (pipe == NULL)
++		return "";
++
++	if (fgets(line, 1024, pipe)) {
++		strtok(line, "\n");
++		pclose(pipe);
++		return std::string(line);
++	}
++
++	pclose(pipe);
++	return "";
++}
++
++bool ApiSystem::setCircuitSwordDaemonConfig(const std::string& key, const std::string& value)
++{
++	return executeScript("circuitsword-daemon-config set " + key + " " + value);
++}
++
+ bool ApiSystem::forgetBluetoothControllers() 
+ {
+ 	return executeScript("batocera-config forgetBT");
+diff --git a/es-app/src/ApiSystem.h b/es-app/src/ApiSystem.h
+index 731909de4..a3be1dcd4 100644
+--- a/es-app/src/ApiSystem.h
++++ b/es-app/src/ApiSystem.h
+@@ -272,7 +272,10 @@ public:
+ 
+ 	bool setButtonColorGameForce(std::string basic_string);
+ 
+-	bool setPowerLedGameForce(std::string basic_string);    
++	bool setPowerLedGameForce(std::string basic_string);
++
++	std::string getCircuitSwordDaemonConfig(const std::string& key);
++	bool setCircuitSwordDaemonConfig(const std::string& key, const std::string& value);
+ 
+     /* audio card */
+     bool setAudioOutputDevice(std::string device);
+diff --git a/es-app/src/guis/GuiMenu.cpp b/es-app/src/guis/GuiMenu.cpp
+index 5e98a85a0..008a0822b 100644
+--- a/es-app/src/guis/GuiMenu.cpp
++++ b/es-app/src/guis/GuiMenu.cpp
+@@ -1860,6 +1860,115 @@ void GuiMenu::openSystemSettings()
+ 	});
+ #endif
+ 
++#if CIRCUITSWORD
++	// Circuit-Sword hardware-daemon tunables -- same 5 settings editable
++	// via circuitsword-quickmenu's in-game Daemon Settings overlay
++	// (docs/superpowers/specs/2026-08-13-es-daemon-settings-design.md).
++	// Values live in circuitsword.conf via the daemon, NOT in SystemConf/
++	// batocera.conf -- do not mirror them into SystemConf, unlike the
++	// GameForce/RK3326 rows above.
++	//
++	// The 4 numeric rows below use fixed-choice OptionListComponent lists
++	// rather than free-text entry: GuiMenu.cpp includes
++	// GuiTextEditPopupKeyboard.h/GuiTextEditPopup.h but does not actually
++	// use either as a row-construction pattern anywhere in this file (only
++	// OptionListComponent-based rows are used), so introducing a new
++	// free-text-entry row type here would be a larger, riskier change than
++	// this task's scope. Ranges are centered on this project's
++	// DEFAULT_CONFIG values in rpi-circuitsword.py (fan_on_temp: 58.0,
++	// fan_off_temp: 50.0, fan_poll_interval_s: 3, switch_debounce_ms: 800).
++	auto fanEnabled_CircuitSword = std::make_shared< OptionListComponent<std::string> >(mWindow, _("FAN ENABLED"));
++	std::string fanEnabledVal_CircuitSword = ApiSystem::getInstance()->getCircuitSwordDaemonConfig("fan_enabled");
++	fanEnabled_CircuitSword->add(_("ON"), "1", fanEnabledVal_CircuitSword == "1");
++	fanEnabled_CircuitSword->add(_("OFF"), "0", fanEnabledVal_CircuitSword == "0");
++	s->addWithLabel(_("FAN ENABLED"), fanEnabled_CircuitSword);
++	s->addSaveFunc([fanEnabled_CircuitSword]
++	{
++		if (fanEnabled_CircuitSword->changed())
++			ApiSystem::getInstance()->setCircuitSwordDaemonConfig("fan_enabled", fanEnabled_CircuitSword->getSelected());
++	});
++
++	auto fanOnTemp_CircuitSword = std::make_shared< OptionListComponent<std::string> >(mWindow, _("FAN ON TEMP (C)"));
++	std::string fanOnTempVal_CircuitSword = ApiSystem::getInstance()->getCircuitSwordDaemonConfig("fan_on_temp");
++	bool fanOnTempMatched_CircuitSword = false;
++	for (int t = 45; t <= 75; t += 5)
++	{
++		std::string tStr = std::to_string(t);
++		bool isSet = fanOnTempVal_CircuitSword == tStr || fanOnTempVal_CircuitSword == (tStr + ".0");
++		if (isSet)
++			fanOnTempMatched_CircuitSword = true;
++		fanOnTemp_CircuitSword->add(tStr, tStr, isSet);
++	}
++	if (!fanOnTempMatched_CircuitSword && !fanOnTempVal_CircuitSword.empty())
++		fanOnTemp_CircuitSword->add(fanOnTempVal_CircuitSword, fanOnTempVal_CircuitSword, true);
++	s->addWithLabel(_("FAN ON TEMP (C)"), fanOnTemp_CircuitSword);
++	s->addSaveFunc([fanOnTemp_CircuitSword]
++	{
++		if (fanOnTemp_CircuitSword->changed())
++			ApiSystem::getInstance()->setCircuitSwordDaemonConfig("fan_on_temp", fanOnTemp_CircuitSword->getSelected());
++	});
++
++	auto fanOffTemp_CircuitSword = std::make_shared< OptionListComponent<std::string> >(mWindow, _("FAN OFF TEMP (C)"));
++	std::string fanOffTempVal_CircuitSword = ApiSystem::getInstance()->getCircuitSwordDaemonConfig("fan_off_temp");
++	bool fanOffTempMatched_CircuitSword = false;
++	for (int t = 35; t <= 65; t += 5)
++	{
++		std::string tStr = std::to_string(t);
++		bool isSet = fanOffTempVal_CircuitSword == tStr || fanOffTempVal_CircuitSword == (tStr + ".0");
++		if (isSet)
++			fanOffTempMatched_CircuitSword = true;
++		fanOffTemp_CircuitSword->add(tStr, tStr, isSet);
++	}
++	if (!fanOffTempMatched_CircuitSword && !fanOffTempVal_CircuitSword.empty())
++		fanOffTemp_CircuitSword->add(fanOffTempVal_CircuitSword, fanOffTempVal_CircuitSword, true);
++	s->addWithLabel(_("FAN OFF TEMP (C)"), fanOffTemp_CircuitSword);
++	s->addSaveFunc([fanOffTemp_CircuitSword]
++	{
++		if (fanOffTemp_CircuitSword->changed())
++			ApiSystem::getInstance()->setCircuitSwordDaemonConfig("fan_off_temp", fanOffTemp_CircuitSword->getSelected());
++	});
++
++	auto fanPollInterval_CircuitSword = std::make_shared< OptionListComponent<std::string> >(mWindow, _("FAN POLL INTERVAL (S)"));
++	std::string fanPollIntervalVal_CircuitSword = ApiSystem::getInstance()->getCircuitSwordDaemonConfig("fan_poll_interval_s");
++	bool fanPollIntervalMatched_CircuitSword = false;
++	for (int s_ = 1; s_ <= 10; s_++)
++	{
++		std::string sStr = std::to_string(s_);
++		bool isSet = fanPollIntervalVal_CircuitSword == sStr;
++		if (isSet)
++			fanPollIntervalMatched_CircuitSword = true;
++		fanPollInterval_CircuitSword->add(sStr, sStr, isSet);
++	}
++	if (!fanPollIntervalMatched_CircuitSword && !fanPollIntervalVal_CircuitSword.empty())
++		fanPollInterval_CircuitSword->add(fanPollIntervalVal_CircuitSword, fanPollIntervalVal_CircuitSword, true);
++	s->addWithLabel(_("FAN POLL INTERVAL (S)"), fanPollInterval_CircuitSword);
++	s->addSaveFunc([fanPollInterval_CircuitSword]
++	{
++		if (fanPollInterval_CircuitSword->changed())
++			ApiSystem::getInstance()->setCircuitSwordDaemonConfig("fan_poll_interval_s", fanPollInterval_CircuitSword->getSelected());
++	});
++
++	auto switchDebounce_CircuitSword = std::make_shared< OptionListComponent<std::string> >(mWindow, _("SWITCH DEBOUNCE (MS)"));
++	std::string switchDebounceVal_CircuitSword = ApiSystem::getInstance()->getCircuitSwordDaemonConfig("switch_debounce_ms");
++	bool switchDebounceMatched_CircuitSword = false;
++	for (int ms = 200; ms <= 1500; ms += 100)
++	{
++		std::string msStr = std::to_string(ms);
++		bool isSet = switchDebounceVal_CircuitSword == msStr;
++		if (isSet)
++			switchDebounceMatched_CircuitSword = true;
++		switchDebounce_CircuitSword->add(msStr, msStr, isSet);
++	}
++	if (!switchDebounceMatched_CircuitSword && !switchDebounceVal_CircuitSword.empty())
++		switchDebounce_CircuitSword->add(switchDebounceVal_CircuitSword, switchDebounceVal_CircuitSword, true);
++	s->addWithLabel(_("SWITCH DEBOUNCE (MS)"), switchDebounce_CircuitSword);
++	s->addSaveFunc([switchDebounce_CircuitSword]
++	{
++		if (switchDebounce_CircuitSword->changed())
++			ApiSystem::getInstance()->setCircuitSwordDaemonConfig("switch_debounce_ms", switchDebounce_CircuitSword->getSelected());
++	});
++#endif
++
+ 	// Overclock choice
+ 	if (ApiSystem::getInstance()->isScriptingSupported(ApiSystem::OVERCLOCK))
+ 	{

@@ -1,0 +1,60 @@
+################################################################################
+#
+# rpcs3
+#
+################################################################################
+
+RPCS3_VERSION = v0.0.40
+RPCS3_SITE = https://github.com/RPCS3/rpcs3.git
+RPCS3_SITE_METHOD=git
+RPCS3_GIT_SUBMODULES=YES
+RPCS3_LICENSE = GPLv2
+RPCS3_EMULATOR_INFO = rpcs3.emulator.yml
+RPCS3_SUPPORTS_IN_SOURCE_BUILD = NO
+
+RPCS3_DEPENDENCIES += alsa-lib faudio ffmpeg flatbuffers host-clang libcurl libevdev
+RPCS3_DEPENDENCIES += libglew libglu libpng libusb libxml2 llvm mesa3d ncurses openal
+RPCS3_DEPENDENCIES += opencv4 qt6base qt6declarative qt6multimedia qt6svg rtmpdump
+RPCS3_DEPENDENCIES += sdl3 wolfssl
+
+RPCS3_CMAKE_BACKEND = ninja
+# Use clang for performance
+RPCS3_CONF_OPTS += -DCMAKE_C_COMPILER=$(HOST_DIR)/bin/clang
+RPCS3_CONF_OPTS += -DCMAKE_CXX_COMPILER=$(HOST_DIR)/bin/clang++
+RPCS3_CONF_OPTS += -DCMAKE_EXE_LINKER_FLAGS="-lstdc++"
+
+RPCS3_CONF_OPTS += -DCMAKE_BUILD_TYPE=Release
+RPCS3_CONF_OPTS += -DBUILD_SHARED_LIBS=OFF
+RPCS3_CONF_OPTS += -DCMAKE_INSTALL_PREFIX=/usr
+RPCS3_CONF_OPTS += -DCMAKE_CROSSCOMPILING=ON
+RPCS3_CONF_OPTS += -DUSE_NATIVE_INSTRUCTIONS=OFF
+RPCS3_CONF_OPTS += -DUSE_PRECOMPILED_HEADERS=OFF
+RPCS3_CONF_OPTS += -DUSE_SYSTEM_FFMPEG=ON
+RPCS3_CONF_OPTS += -DUSE_SYSTEM_CURL=ON
+RPCS3_CONF_OPTS += -DUSE_SYSTEM_LIBUSB=ON
+RPCS3_CONF_OPTS += -DUSE_LIBEVDEV=ON
+RPCS3_CONF_OPTS += -DUSE_SYSTEM_OPENCV=ON
+RPCS3_CONF_OPTS += -DUSE_SDL=ON
+RPCS3_CONF_OPTS += -DUSE_SYSTEM_SDL=ON
+RPCS3_CONF_OPTS += -DUSE_FAUDIO=ON
+RPCS3_CONF_OPTS += -DUSE_DISCORD_RPC=OFF
+RPCS3_CONF_OPTS += -DOpenGL_GL_PREFERENCE=LEGACY
+RPCS3_CONF_OPTS += -DLLVM_DIR=$(STAGING_DIR)/usr/lib/cmake/llvm/
+RPCS3_CONF_OPTS += -DSTATIC_LINK_LLVM=ON
+RPCS3_CONF_OPTS += -DUSE_LTO=OFF
+
+ifeq ($(BR2_PACKAGE_VULKAN_HEADERS)$(BR2_PACKAGE_VULKAN_LOADER),yy)
+    RPCS3_DEPENDENCIES += vulkan-headers vulkan-loader
+    RPCS3_CONF_OPTS += -DUSE_VULKAN=ON
+else
+    RPCS3_CONF_OPTS += -DUSE_VULKAN=OFF
+endif
+
+define RPCS3_INSTALL_RPCS3_EXIT
+	$(INSTALL) -D -m 0755 $(RPCS3_PKGDIR)/rpcs3-exit $(TARGET_DIR)/usr/bin/rpcs3-exit
+endef
+
+RPCS3_POST_INSTALL_TARGET_HOOKS += RPCS3_INSTALL_RPCS3_EXIT
+
+$(eval $(cmake-package))
+$(eval $(emulator-info-package))

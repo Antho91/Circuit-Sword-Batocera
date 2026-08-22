@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Circle badge with a letter-"A"-shaped hole (two diagonal legs + a
+       crossbar), all subtracted from the circle in one compound path via
+       fill-rule="evenodd". No <mask> element: CairoSVG in this toolchain
+       does not honor luminance <mask> reliably (see convert-icons notes),
+       so the cutout is expressed directly as path geometry instead. -->
+  <path fill-rule="evenodd" fill="#ffffff" d="
+    M 8,1 A 7,7 0 1,0 8,15 A 7,7 0 1,0 8,1 Z
+    M 7.5,4.2 L 8,4.2 L 6.3,12 L 5.5,12 Z
+    M 8,4.2 L 8.5,4.2 L 10.5,12 L 9.7,12 Z
+    M 7.0,8.8 L 9.0,8.8 L 9.0,9.8 L 7.0,9.8 Z
+  "/>
+</svg>

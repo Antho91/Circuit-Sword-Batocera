@@ -1,0 +1,10 @@
+comment "circuitsword-battery needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
+
+config BR2_PACKAGE_CIRCUITSWORD_BATTERY
+	bool "circuitsword-battery"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Virtual power_supply kernel module feeding EmulationStation's
+	  native battery icon from the Circuit-Sword's Arduino Leonardo
+	  battery ADC, via the rpi-circuitsword.py daemon.

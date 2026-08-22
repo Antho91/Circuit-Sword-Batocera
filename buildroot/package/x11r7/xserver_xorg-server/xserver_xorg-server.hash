@@ -1,0 +1,5 @@
+# From https://lists.x.org/archives/xorg-announce/2025-November/003643.html
+sha256  952444a35ce6a720c3e978d3bad2b683bacb648cceedc03e3600f6fb170071d2  xorg-server-21.1.21.tar.gz
+sha512  f492eababe9ddc7cf3fabc6d5e0b017aed18828ad2df343fee22c86cadf3443ce2a0e3cc8e4470635ba9cee15508142109cf481b525d63ac28f0372ff675e4c3  xorg-server-21.1.21.tar.gz
+# Locally calculated
+sha256  4cc0447a22635c7b2f1a93fec4aa94f1970fadeb72a063de006b51cf4963a06f  COPYING
