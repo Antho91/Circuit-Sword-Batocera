@@ -41,19 +41,30 @@ how to actually run a build.
 GNU Make's `$(realpath $(CURDIR))`, used inside Buildroot's own
 top-level `Makefile` to compute `PROJECT_DIR`, silently truncates at the
 first space in a path. If this project's own directory lives under a
-space-containing path (as this repo's own default checkout location
-does — `.../Circuit-Sword Batocera/...`), Buildroot's build breaks with
-a confusing, unrelated-looking error deep inside its own Makefile (not a
-clear "your path has a space" message).
+space-containing path, Buildroot's build breaks with a confusing,
+unrelated-looking error deep inside its own Makefile (not a clear "your
+path has a space" message).
 
-`batocera-build/scripts/env.sh` now fails fast and explicitly if the
+**Corrected 2026-08-22**: this repo's own checkout directory used to be
+named `Circuit-Sword Batocera` (with a space) — the exact trap this
+section warns about, hit for real early in this project and the reason
+the `BATOCERA_SRC`/`BATOCERA_BUILD_ROOT` override dance existed at all.
+The directory has since been renamed to `Circuit-Sword-Batocera` (no
+space), and the dev-tree checkout (previously kept in a separate
+space-free location outside this repo entirely, as a workaround) now
+lives inside it at its natural default location,
+`batocera-build/build/batocera.linux` — matching what
+`setup-build-tree.sh` and `env.sh` expect out of the box. **A normal
+checkout of this repo, with no renaming, needs none of the overrides
+below and no separate external directory.**
+
+`batocera-build/scripts/env.sh` still fails fast and explicitly if the
 effective `BATOCERA_SRC`, `OUTPUT_DIR`, `DL_DIR`, or `CCACHE_DIR`
-contains a space, instead of letting this corrupt a build silently.
-**Before your first build**, set `BATOCERA_SRC` to an explicit,
-space-free path — and, since this repo's own default checkout location
-(`.../Circuit-Sword Batocera/...`) contains a space, and `OUTPUT_DIR`/
-`DL_DIR`/`CCACHE_DIR` default to living under this repo too, override
-their shared parent, `BATOCERA_BUILD_ROOT`, at the same time:
+contains a space, instead of letting this corrupt a build silently —
+this stays in place defensively, since nothing stops a future clone or
+fork from landing under a space-containing path again. If that ever
+happens to you, override `BATOCERA_SRC` and the shared parent of
+`OUTPUT_DIR`/`DL_DIR`/`CCACHE_DIR`, `BATOCERA_BUILD_ROOT`:
 
 ```bash
 export BATOCERA_SRC=/path/without/spaces/batocera.linux

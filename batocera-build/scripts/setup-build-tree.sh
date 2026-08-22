@@ -17,6 +17,34 @@ source "$PINNED"
 
 echo "=== batocera.linux checkout: $BATOCERA_SRC ==="
 
+# Safety guard: this checkout is meant to be disposable (this script's
+# whole model is "reset to the pinned commit, re-apply patches"), so a
+# real, committed development history here -- not just uncommitted
+# patch-applied working-tree changes -- means this is NOT the checkout
+# this script thinks it is. Re-running against one would silently
+# detach HEAD and git-clean away every one of those commits. Detect it
+# by checking whether HEAD has any commits beyond the pinned commit
+# (patch-apply via `git apply` never creates commits, so a genuine
+# disposable checkout always sits exactly at the pinned commit).
+if [ -d "$BATOCERA_SRC/.git" ] && [ "${FORCE_SETUP_BUILD_TREE:-}" != "1" ]; then
+    (cd "$BATOCERA_SRC" && git fetch origin "$BATOCERA_LINUX_COMMIT" >/dev/null 2>&1 || true)
+    AHEAD_COMMITS=$(cd "$BATOCERA_SRC" && git rev-list --count "$BATOCERA_LINUX_COMMIT..HEAD" 2>/dev/null || echo "?")
+    if [ "$AHEAD_COMMITS" != "0" ] && [ "$AHEAD_COMMITS" != "?" ]; then
+        echo "ERROR: $BATOCERA_SRC has $AHEAD_COMMITS real commit(s) beyond" >&2
+        echo "the pinned commit ($BATOCERA_LINUX_COMMIT) -- this looks like a" >&2
+        echo "genuine development history, not a disposable patch-applied" >&2
+        echo "checkout. Running this script would git-clean and reset-away" >&2
+        echo "that history." >&2
+        echo "" >&2
+        echo "If this is really the dev-tree you mean to regenerate from" >&2
+        echo "scratch (its history already captured elsewhere, e.g. pushed" >&2
+        echo "to a remote, or you've confirmed batocera-linux.patch already" >&2
+        echo "reflects everything you need), re-run with:" >&2
+        echo "  FORCE_SETUP_BUILD_TREE=1 $0" >&2
+        exit 1
+    fi
+fi
+
 if [ ! -d "$BATOCERA_SRC/.git" ]; then
     echo "Cloning $BATOCERA_LINUX_REPO (this pulls the buildroot submodule too, several hundred MB) ..."
     mkdir -p "$(dirname "$BATOCERA_SRC")"

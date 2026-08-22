@@ -5,11 +5,11 @@
 # separately with a stub listener.
 set -e
 
-SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/../batocera-build-wifi/batocera.linux/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config"
+SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/batocera-build/build/batocera.linux/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config"
 # Fall back to a direct path if the relative layout above doesn't resolve
 # (this test may be run from different working directories).
 if [ ! -f "$SCRIPT" ]; then
-    SCRIPT="/Users/bas/batocera-build-wifi/batocera.linux/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config"
+    SCRIPT="/Users/bas/Circuit-Sword-Batocera/batocera-build/build/batocera.linux/package/batocera/utils/rpigpioswitch/circuitsword-daemon-config"
 fi
 
 TMPDIR=$(mktemp -d)

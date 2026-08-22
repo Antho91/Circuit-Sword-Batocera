@@ -4,7 +4,7 @@
 # tree with the host compiler -- no cross toolchain, no Wayland, no device.
 set -euo pipefail
 
-BASE="${BATOCERA_SRC:-/Users/bas/batocera-build-wifi/batocera.linux}/package/batocera/utils"
+BASE="${BATOCERA_SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/batocera-build/build/batocera.linux}/package/batocera/utils"
 QM_SRC="$BASE/circuitsword-quickmenu"
 SB_SRC="$BASE/circuitsword-statusbar"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -6,7 +6,7 @@
 # values and checks exit codes / stderr content.
 set -e
 
-ENV_SH="/Users/bas/Circuit-Sword Batocera/batocera-build/scripts/env.sh"
+ENV_SH="$(cd "$(dirname "$0")/.." && pwd)/batocera-build/scripts/env.sh"
 
 failures=0
 check() {
