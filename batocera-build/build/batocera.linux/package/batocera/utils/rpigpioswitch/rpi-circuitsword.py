@@ -661,8 +661,7 @@ def volume_bridge(stop_event: threading.Event):
 
 # ============================================================
 # Power switch: GPIO 37, pulled up (ON=HIGH idle, OFF=LOW when flipped).
-# UNCONFIRMED on real hardware -- flip the polarity check below if this
-# board reads inverted (see design doc "Open items").
+# Confirmed on real hardware 2026-08-22 -- polarity as documented below.
 # 800ms sustained OFF before acting (PWRSW_OFF_DEBOUNCE_MS in config.h).
 # ============================================================
 SWITCH_POLL_INTERVAL_S = 0.05  # 50ms, matches POLL_INTERVAL_MS in config.h

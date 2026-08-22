@@ -239,7 +239,9 @@ button-combo detection doesn't interfere with normal ES navigation input.
 
 - Confirm GPIO 35 / GPIO 37 polarities on real hardware (inherited
   assumption from RetroPie, never verified even there — see
-  `Retropie_source/FUTURE.md`).
+  `Retropie_source/FUTURE.md`). **GPIO 37 (power switch) confirmed
+  correct on real hardware 2026-08-22** — no polarity flip needed.
+  GPIO 35 (fan, active-LOW) still unconfirmed.
 - Exact battery voltage-to-percent scaling constants
   (`BATT_VOLTSCALE`/`BATT_DACRES`/`BATT_DACMAX`/`BATT_RESDIVVAL`/
   `BATT_RESDIVMUL` in `cs-hud_new/src/config.h`) need to be carried over
