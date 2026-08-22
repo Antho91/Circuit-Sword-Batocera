@@ -82,56 +82,45 @@ so guarding it would be pure friction with no real risk behind it.
 
 ## First-time setup
 
-```bash
-export BATOCERA_SRC=/path/without/spaces/batocera.linux
-batocera-build/scripts/setup-build-tree.sh
-```
+**Corrected 2026-08-22 — there is no first-time setup step anymore.**
+`batocera-build/build/batocera.linux` (the full buildable dev-tree —
+upstream `batocera.linux` plus every Circuit-Sword commit, `buildroot`
+included as plain tracked files, no submodule) is committed directly in
+this repo. A plain `git clone` of this repo already gives you
+everything, ready to build — skip straight to "Building" below.
 
-This clones upstream `batocera.linux` at the commit pinned in
-`batocera-build/PINNED_COMMITS.txt`, applies
-`batocera-build/patches/batocera-linux.patch` (this project's single
-cumulative source-of-truth diff against upstream) plus
-`batocera-build/patches/buildroot.patch` (inside the `buildroot`
-submodule) and two loose per-file patches, and copies in
-`batocera-build/overlay/` files. Safe to re-run — it resets to the
-pinned commit and re-applies from scratch each time, so a stray local
-edit inside `$BATOCERA_SRC` never silently persists across a re-run
-(see the warning below).
+Edit files directly inside `batocera-build/build/batocera.linux` the
+same way you'd edit any other part of this repo, and commit your
+changes there normally (it's real, permanent project history now, not
+a disposable checkout) — no separate patch-capture step needed.
 
-**Do not hand-edit files inside `$BATOCERA_SRC` expecting them to
-survive.** `setup-build-tree.sh` runs `git clean -fdx` + `git checkout --`
-there on every run. To make a real change: edit the checkout, then
-capture it back into this project's version-controlled patch file:
+<details>
+<summary>Legacy: the old patch-capture workflow (kept for history,
+not the current process)</summary>
 
-```bash
-cd "$BATOCERA_SRC"
-# ... make your change, commit it locally in this checkout ...
-git diff --submodule=diff --binary <pinned-commit-from-PINNED_COMMITS.txt> HEAD -- . ':!buildroot' \
-  > /path/to/this/repo/batocera-build/patches/batocera-linux.patch
-```
+Before 2026-08-22, this dev-tree lived outside the repo as a disposable
+checkout, regenerated via `setup-build-tree.sh` from
+`batocera-build/patches/batocera-linux.patch` (a single cumulative diff
+against a pinned upstream commit) plus a `buildroot.patch` and two
+loose per-file patches. `setup-build-tree.sh` still exists as a
+standalone verification tool (point `BATOCERA_SRC` outside this repo to
+use it — see its own header comment) but is no longer part of normal
+setup, and those `.patch` files are a historical record, not
+maintained going forward.
 
-This is exactly the workflow every feature plan in this project's
-history has used — the patch file, not the checkout, is what's actually
-committed and shared.
+One gotcha from that era worth remembering if you ever regenerate a
+patch like it by hand: `git diff --submodule=diff --binary <base> HEAD
+-- . ':!buildroot'` — **`--binary` must come before the `--` pathspec
+separator**, not after. `git diff ... -- . ':!buildroot' --binary`
+silently treats `--binary` as a literal pathspec instead of a flag, and
+`git diff` degrades to writing a useless `Binary files ... differ` stub
+with no actual content and no error. This bit Task 7's validation build
+for real: a misplaced-flag patch regeneration left
+`circuitsword-quickmenu/fonts/Cabin-Regular.ttf`'s diff entry empty,
+which only surfaced later as `error: cannot apply binary patch ...
+without full index line` on a from-scratch checkout.
 
-**`--binary` is required, and its position matters.** It must come
-*before* the `--` pathspec separator, not after — `git diff ... --
-. ':!buildroot' --binary` silently treats `--binary` as a literal
-pathspec argument instead of a flag, and `git diff` degrades to writing
-a useless `Binary files ... differ` stub with no actual content and no
-error. Task 7's end-to-end validation build hit exactly this: an earlier
-patch regeneration had (accidentally) run the flag-less/misplaced form,
-so `batocera-linux.patch`'s entry for
-`circuitsword-quickmenu/fonts/Cabin-Regular.ttf` (a `.ttf`, added via
-this same workflow) carried no binary content at all.
-`setup-build-tree.sh` then failed outright on a fresh checkout with
-`error: cannot apply binary patch ... without full index line` — this
-doesn't surface until someone runs a build from a truly clean
-`BATOCERA_SRC`, since an already-populated checkout still has the file
-on disk from before. Any future patch regeneration that touches a
-binary asset (fonts, images, prebuilt binaries) must use the
-`--binary` form above, correctly positioned, or it will silently
-reproduce this exact failure.
+</details>
 
 ## Building
 
@@ -145,14 +134,16 @@ manual required here, just be aware it's happening the first time you
 run either script and it takes a few seconds.
 
 ```bash
-export BATOCERA_SRC=/path/without/spaces/batocera.linux
 export PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:$PATH"  # macOS only
 source batocera-build/scripts/env.sh  # for $MAKE_OPTS -- see "A known rough edge" below
-# ^ run from this repo's root -- env.sh sets -euo pipefail and can exit
-#   your shell outright if BATOCERA_SRC contains a space (it checks for
-#   exactly that, see "The space-in-path trap" above); a plain-BATOCERA_SRC
-#   example like this one won't hit it, but keep that in mind before
-#   sourcing it into a shell you care about keeping open.
+# ^ run from this repo's root -- BATOCERA_SRC defaults to
+#   batocera-build/build/batocera.linux inside this repo, no override
+#   needed for a normal checkout. env.sh sets -euo pipefail and can exit
+#   your shell outright if BATOCERA_SRC ends up pointing somewhere
+#   space-containing (it checks for exactly that, see "The
+#   space-in-path trap" above) -- shouldn't happen with the default,
+#   but keep that in mind before sourcing it into a shell you care
+#   about keeping open.
 
 cd "$BATOCERA_SRC"
 make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 \
@@ -306,14 +297,14 @@ Makefile does `-include $(LOCAL_MK)` early (`LOCAL_MK` defaults to
 Buildroot's `.config`, controlling every package's own build parallelism
 independent of `PARALLEL_BUILD`.
 
-`build-image.sh` and `build-kernel.sh` now regenerate this file
+`build-image.sh` and `build-kernel.sh` regenerate this file
 automatically on every run (`env.sh`'s `sync_batocera_mk`, from the
-`$BR2_JLEVEL` env var, defaulting to `2`) — this has to happen on every
-run because `setup-build-tree.sh`'s `git clean -fdx` wipes a
-hand-created `batocera.mk` on each re-run of that script. If you're
-invoking `make ... bcm2837-build` directly instead of through the
-scripts (per the manual example earlier in this section), you need to
-create/export this yourself.
+`$BR2_JLEVEL` env var, defaulting to `2`) — `batocera.mk` is
+gitignored inside `$BATOCERA_SRC` (unlike most of that tree, which is
+tracked directly in this repo now), so nothing persists it between
+runs on its own. If you're invoking `make ... bcm2837-build` directly
+instead of through the scripts (per the manual example earlier in this
+section), you need to create/export this yourself.
 
 **Exception**: webkitgtk ignores `BR2_JLEVEL` entirely — see below.
 
@@ -353,13 +344,16 @@ Nobody should assume that without testing it themselves first, though —
 If you hit an OOM during the webkitgtk build step: edit
 `$BATOCERA_SRC/buildroot/package/webkitgtk/webkitgtk.mk` directly and
 hardcode `njobs := 1` (or another value you've verified is safe on your
-own hardware) for that run. This edit does not need to (and should not)
-be captured in `batocera-linux.patch`/`buildroot.patch` —
-`setup-build-tree.sh` regenerates this file fresh from upstream on every
-run, so a local edit here is exactly as temporary as it needs to be. If
-you already have a partially-built webkitgtk from a crashed attempt,
-`PKG=webkitgtk-dirclean` (see "Rebuilding a single package" above)
-before resuming, or the stale build directory won't pick up the edit.
+own hardware) for that run. **Corrected 2026-08-22: this file is a
+normal tracked file in this repo now** (buildroot was flattened from a
+submodule into plain files) — `git status` will show it modified.
+Leave it uncommitted (it's genuinely host-RAM-dependent, not something
+every contributor should inherit) rather than committing it, unless
+you've deliberately decided `njobs := 1` should become this project's
+permanent default. If you already have a partially-built webkitgtk from
+a crashed attempt, `PKG=webkitgtk-dirclean` (see "Rebuilding a single
+package" above) before resuming, or the stale build directory won't
+pick up the edit.
 
 Because webkitgtk protects itself this way regardless of the outer
 `BR2_JLEVEL`, there's no need to wait for it to finish before running
