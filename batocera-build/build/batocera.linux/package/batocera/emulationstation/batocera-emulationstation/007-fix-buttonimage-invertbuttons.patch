@@ -1,0 +1,41 @@
+diff --git a/es-core/src/InputConfig.cpp b/es-core/src/InputConfig.cpp
+--- a/es-core/src/InputConfig.cpp	2026-08-22 15:02:54
++++ b/es-core/src/InputConfig.cpp	2026-08-22 15:03:14
+@@ -376,24 +376,24 @@
+ 
+ std::string InputConfig::buttonImage(const std::string& button)
+ {
+-#ifdef INVERTEDINPUTCONFIG
+-	if (!Settings::getInstance()->getBool("InvertButtons"))
+-	{
+-		if (button == "a")
+-			return ":/help/buttons_south.svg";		
+-		if (button == "b")
+-			return ":/help/buttons_east.svg";
+-	}
+-#endif
+-	if (button == "a")
+-		return ":/help/buttons_east.svg";
++	// Circuit-Sword: this used to only flip a<->b icons under
++	// #ifdef INVERTEDINPUTCONFIG, a macro no board in this whole ES fork
++	// ever defines -- so toggling Settings' "InvertButtons" (see
++	// AssignActionButtons() below, which DOES respond to it unconditionally)
++	// moved which physical button confirms/cancels without ever moving
++	// which icon is drawn for it, guaranteeing icon/button mismatch on any
++	// board -- like ours -- with a custom (non-SDL-gamecontrollerdb)
++	// joystick mapping. Made unconditional so both stay in sync.
++	bool invertButtons = Settings::getInstance()->getBool("InvertButtons");
++	if (button == "a")
++		return invertButtons ? ":/help/buttons_south.svg" : ":/help/buttons_east.svg";
+ 	if (button == "b")
+-		return ":/help/buttons_south.svg";
++		return invertButtons ? ":/help/buttons_east.svg" : ":/help/buttons_south.svg";
+ 	if (button == "x")
+ 		return ":/help/buttons_north.svg";
+ 	if (button == "y")
+ 		return ":/help/buttons_west.svg";
+-	
++
+ 	return button;
+ }
+ 
