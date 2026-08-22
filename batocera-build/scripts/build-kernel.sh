@@ -15,6 +15,7 @@
 # rebuild -- just run build-image.sh directly, it repackages fast.
 set -euo pipefail
 cd "$(dirname "$0")"
+SCRIPT_DIR="$(pwd)"
 source ./env.sh
 require_src
 require_disk
@@ -30,8 +31,33 @@ make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES="$BR_DOCKER_VOLUMES" O="$OUTPUT_DI
 
 echo "Repackaging the image ..."
 echo "Logging to $LOG_FILE"
-nohup make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES="$BR_DOCKER_VOLUMES" O="$OUTPUT_DIR/$BOARD" BR2_EXTERNAL="$BATOCERA_SRC" DL_DIR="$DL_DIR" BATCH_MODE=1 "$BOARD-build" \
-    > "$LOG_FILE" 2>&1 &
+(
+    set +e
+    make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES="$BR_DOCKER_VOLUMES" O="$OUTPUT_DIR/$BOARD" BR2_EXTERNAL="$BATOCERA_SRC" DL_DIR="$DL_DIR" BATCH_MODE=1 "$BOARD-build"
+    STATUS=$?
+    if [ "$STATUS" -eq 0 ]; then
+        echo ""
+        echo "=== Build succeeded ==="
+        if [ "$BR_DOCKER_VOLUMES" = "1" ]; then
+            echo "=== Extracting artifacts automatically ==="
+            "$SCRIPT_DIR/extract-artifacts.sh"
+        fi
+    else
+        echo ""
+        echo "=== Build FAILED (exit $STATUS) -- not extracting artifacts ==="
+    fi
+    exit "$STATUS"
+) > "$LOG_FILE" 2>&1 &
 PID=$!
 echo "Started, PID $PID"
 echo "$PID" > /tmp/circuitsword-build.pid
+
+echo ""
+if [ "$BR_DOCKER_VOLUMES" = "1" ]; then
+    echo "On success, the image will be extracted automatically to:"
+    echo "  $REPO_ROOT/output/images"
+    echo "No manual extract-artifacts.sh needed -- check \$LOG_FILE for progress/completion."
+else
+    echo "Image will land at:"
+    echo "  $OUTPUT_DIR/$BOARD/images/batocera/images/$BOARD/batocera-$BOARD-*.img.gz"
+fi
