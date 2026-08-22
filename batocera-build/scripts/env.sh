@@ -7,18 +7,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # --- Paths -------------------------------------------------------------
-# BATOCERA_SRC: the actual git checkout of batocera.linux with our patches
-# applied. Lives inside this repo, under batocera-build/build/ -- this
-# checkout is source code only (no case-sensitivity requirement, unlike
-# OUTPUT_DIR/DL_DIR/CCACHE_DIR below), so it's fine on the project's
-# normal filesystem. It's git-ignored (see .gitignore) and fully
-# regenerable via setup-build-tree.sh -- never commit it directly, commit
-# changes to batocera-build/patches/ instead.
-#
-# NOTE: setup-build-tree.sh runs `git clean -fdx` + `git checkout --` in
-# $BATOCERA_SRC to guarantee a clean patch-apply -- don't hand-edit files
-# in there expecting them to survive a re-run; edit batocera-build/patches/
-# (or the overlay/ files) and re-run setup-build-tree.sh instead.
+# BATOCERA_SRC: the full buildable batocera.linux dev-tree (upstream +
+# every Circuit-Sword commit, buildroot included as plain files, no
+# submodule). Corrected 2026-08-22: this is tracked directly in this
+# repo now, under batocera-build/build/ -- NOT git-ignored, NOT
+# disposable. Edit files in there and commit them the same as anywhere
+# else in this repo; there's no separate patch-capture step anymore.
+# batocera-build/patches/ and overlay/ are a legacy record of what's
+# inside this tree from before the 2026-08-22 merge, not the source of
+# truth going forward.
 : "${BATOCERA_SRC:=$REPO_ROOT/batocera-build/build/batocera.linux}"
 
 # GNU Make's $(realpath $(CURDIR)) -- used by Buildroot's own top-level
@@ -134,7 +131,9 @@ require_src() {
     # known file from the tree instead.
     if [ ! -f "$BATOCERA_SRC/Makefile" ] || [ ! -d "$BATOCERA_SRC/buildroot" ]; then
         echo "ERROR: $BATOCERA_SRC is not a batocera.linux checkout." >&2
-        echo "Run batocera-build/scripts/setup-build-tree.sh first, or set BATOCERA_SRC." >&2
+        echo "It's tracked directly in this repo (batocera-build/build/batocera.linux)" >&2
+        echo "-- a normal git clone should already have it. Check BATOCERA_SRC isn't" >&2
+        echo "overridden to somewhere wrong, or re-clone if the checkout looks incomplete." >&2
         exit 1
     fi
 }
@@ -164,8 +163,9 @@ require_docker() {
 # Regenerates $BATOCERA_SRC/batocera.mk with the current $BR2_JLEVEL on
 # every call. This file is how BR2_JLEVEL actually reaches Buildroot's
 # .config -- see BUILDING.md's "Controlling build parallelism" section.
-# It must be regenerated every run because setup-build-tree.sh's
-# `git clean -fdx` wipes it on each re-run of that script.
+# batocera.mk is gitignored inside $BATOCERA_SRC (unlike most of that
+# tree, which is tracked directly in this repo), so nothing persists it
+# between runs on its own -- regenerated fresh every time instead.
 sync_batocera_mk() {
     echo '$(call add-defconfig,BR2_JLEVEL='"$BR2_JLEVEL"')' > "$BATOCERA_SRC/batocera.mk"
 }

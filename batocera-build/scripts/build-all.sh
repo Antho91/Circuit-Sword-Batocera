@@ -1,10 +1,15 @@
 #!/bin/bash
 # /all -- one-shot entry point for a clean checkout: output-dir setup +
-# build-tree checkout/patch-apply + image build, in order. Equivalent to
-# running setup-disk-image.sh (only if BR_DOCKER_VOLUMES=0),
-# setup-build-tree.sh, and build-image.sh yourself -- this just chains
-# them so a fresh clone can do the whole thing with one command,
-# mirroring Retropie_source/build.sh's `all` target.
+# image build, in order. Equivalent to running setup-disk-image.sh
+# (only if BR_DOCKER_VOLUMES=0) and build-image.sh yourself -- this
+# just chains them so a fresh clone can do the whole thing with one
+# command, mirroring Retropie_source/build.sh's `all` target.
+#
+# Corrected 2026-08-22: no longer runs setup-build-tree.sh.
+# batocera-build/build/batocera.linux is tracked directly in this repo
+# now (a plain `git clone` already gives you the full buildable
+# dev-tree) -- setup-build-tree.sh actively refuses to run against it
+# (see its own header comment), so calling it here would just fail.
 #
 # Default (BR_DOCKER_VOLUMES=1): no disk image needed at all -- the build
 # lives in Docker named volumes. See env.sh for why.
@@ -18,20 +23,17 @@ cd "$(dirname "$0")"
 source ./env.sh
 
 if [ "$BR_DOCKER_VOLUMES" = "1" ]; then
-    echo "=== [1/3] BR_DOCKER_VOLUMES=1 -- no disk image needed, build lives in Docker named volumes ==="
+    echo "=== [1/2] BR_DOCKER_VOLUMES=1 -- no disk image needed, build lives in Docker named volumes ==="
     mkdir -p "$OUTPUT_DIR" "$DL_DIR" "$CCACHE_DIR"
 elif [[ "$(uname)" == "Darwin" ]]; then
-    echo "=== [1/3] setup-disk-image.sh (macOS, BR_DOCKER_VOLUMES=0) ==="
+    echo "=== [1/2] setup-disk-image.sh (macOS, BR_DOCKER_VOLUMES=0) ==="
     ./setup-disk-image.sh
 else
-    echo "=== [1/3] setup-disk-image.sh skipped (not macOS -- using $BATOCERA_BUILD_ROOT directly) ==="
+    echo "=== [1/2] setup-disk-image.sh skipped (not macOS -- using $BATOCERA_BUILD_ROOT directly) ==="
     mkdir -p "$OUTPUT_DIR" "$DL_DIR" "$CCACHE_DIR"
 fi
 
-echo "=== [2/3] setup-build-tree.sh ==="
-./setup-build-tree.sh
-
-echo "=== [3/3] build-image.sh ==="
+echo "=== [2/2] build-image.sh ==="
 ./build-image.sh
 
 if [ "$BR_DOCKER_VOLUMES" = "1" ]; then
