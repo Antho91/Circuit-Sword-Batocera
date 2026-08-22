@@ -81,7 +81,6 @@ echo ""
 if [ "$BR_DOCKER_VOLUMES" = "1" ]; then
     echo "On success, the image will be extracted automatically to:"
     echo "  $REPO_ROOT/output/images"
-    echo "No manual extract-artifacts.sh needed -- check \$LOG_FILE for progress/completion."
 else
     echo "Image will land at:"
     echo "  $OUTPUT_DIR/$BOARD/images/batocera/images/$BOARD/batocera-$BOARD-*.img.gz"
