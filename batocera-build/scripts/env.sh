@@ -13,9 +13,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # repo now, under batocera-build/build/ -- NOT git-ignored, NOT
 # disposable. Edit files in there and commit them the same as anywhere
 # else in this repo; there's no separate patch-capture step anymore.
-# batocera-build/patches/ and overlay/ are a legacy record of what's
-# inside this tree from before the 2026-08-22 merge, not the source of
-# truth going forward.
+# The old patch-capture mechanism (batocera-build/patches/, overlay/,
+# PINNED_COMMITS.txt, setup-build-tree.sh) was removed the same day --
+# fully redundant once this tree became the tracked source of truth.
 : "${BATOCERA_SRC:=$REPO_ROOT/batocera-build/build/batocera.linux}"
 
 # GNU Make's $(realpath $(CURDIR)) -- used by Buildroot's own top-level

@@ -5,11 +5,10 @@
 # just chains them so a fresh clone can do the whole thing with one
 # command, mirroring Retropie_source/build.sh's `all` target.
 #
-# Corrected 2026-08-22: no longer runs setup-build-tree.sh.
-# batocera-build/build/batocera.linux is tracked directly in this repo
-# now (a plain `git clone` already gives you the full buildable
-# dev-tree) -- setup-build-tree.sh actively refuses to run against it
-# (see its own header comment), so calling it here would just fail.
+# Corrected 2026-08-22: no longer runs setup-build-tree.sh (removed the
+# same day). batocera-build/build/batocera.linux is tracked directly in
+# this repo now -- a plain `git clone` already gives you the full
+# buildable dev-tree.
 #
 # Default (BR_DOCKER_VOLUMES=1): no disk image needed at all -- the build
 # lives in Docker named volumes. See env.sh for why.

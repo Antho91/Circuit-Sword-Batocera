@@ -53,8 +53,8 @@ The directory has since been renamed to `Circuit-Sword-Batocera` (no
 space), and the dev-tree checkout (previously kept in a separate
 space-free location outside this repo entirely, as a workaround) now
 lives inside it at its natural default location,
-`batocera-build/build/batocera.linux` — matching what
-`setup-build-tree.sh` and `env.sh` expect out of the box. **A normal
+`batocera-build/build/batocera.linux` — matching what `env.sh` expects
+out of the box. **A normal
 checkout of this repo, with no renaming, needs none of the overrides
 below and no separate external directory.**
 
@@ -102,11 +102,11 @@ Before 2026-08-22, this dev-tree lived outside the repo as a disposable
 checkout, regenerated via `setup-build-tree.sh` from
 `batocera-build/patches/batocera-linux.patch` (a single cumulative diff
 against a pinned upstream commit) plus a `buildroot.patch` and two
-loose per-file patches. `setup-build-tree.sh` still exists as a
-standalone verification tool (point `BATOCERA_SRC` outside this repo to
-use it — see its own header comment) but is no longer part of normal
-setup, and those `.patch` files are a historical record, not
-maintained going forward.
+loose per-file patches. Once the dev-tree became the tracked source of
+truth, that whole mechanism was redundant — `setup-build-tree.sh`,
+`batocera-build/patches/`, `batocera-build/overlay/`, and
+`PINNED_COMMITS.txt` were removed on 2026-08-22 (git history has them,
+if ever needed again).
 
 One gotcha from that era worth remembering if you ever regenerate a
 patch like it by hand: `git diff --submodule=diff --binary <base> HEAD
@@ -194,26 +194,23 @@ been built once in the persistent Docker volume, editing its source and
 re-running a full build silently ships the STALE version.
 
 Any package whose source you've edited must be explicitly force-refreshed
-first:
+first.
+
+**Use `batocera-build/scripts/rebuild-package.sh <package-name> [reinstall]`
+for this** — it wraps the force-refresh + rebuild + repackage sequence
+(defaulting to the always-safe `dirclean` mode; pass `reinstall` for
+the cheaper plain-copy/config-file case). The raw command it runs, for
+reference or if you need to do it by hand:
 
 ```bash
 make MAKE_OPTS="$MAKE_OPTS" BR_DOCKER_VOLUMES=1 O=/path/to/output/bcm2837 BR2_EXTERNAL="$BATOCERA_SRC" \
      DL_DIR=/path/to/output/dl PKG=<package-name>-rebuild bcm2837-pkg
 ```
 
-**There is no dedicated script for this in `batocera-build/scripts/` —
-this is a gap, not an oversight to route around.** An audit of all seven
-scripts in that directory (`build-all.sh`, `build-image.sh`,
-`build-kernel.sh`, `build-wifi.sh`, `setup-disk-image.sh`,
-`extract-artifacts.sh`, `setup-build-tree.sh`) confirmed none of them
-wraps this workflow. Every prior feature plan in this project's history
-that needed to force-refresh a single already-built package ran the
-`make ... PKG=<name>-rebuild bcm2837-pkg` command above directly by
-hand, not through any script — that is the intended, current way to do
-this. Substitute the same `O=`, `BR2_EXTERNAL=`, and `DL_DIR=` values
-`env.sh` would compute (or just `source batocera-build/scripts/env.sh`
-first and use `$OUTPUT_DIR/$BOARD`, `$BATOCERA_SRC`, `$DL_DIR` in the
-command above) so this run shares state with the rest of your build.
+Substitute the same `O=`, `BR2_EXTERNAL=`, and `DL_DIR=` values `env.sh`
+would compute (or just `source batocera-build/scripts/env.sh` first and
+use `$OUTPUT_DIR/$BOARD`, `$BATOCERA_SRC`, `$DL_DIR` in the command above)
+so a manual run shares state with the rest of your build.
 
 Which variant to use depends on the package:
 

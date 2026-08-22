@@ -20,39 +20,30 @@ for full design rationale, phasing, and open gaps.
 
 ## Reproducing the build
 
-The real `batocera.linux` checkout this project builds from is a git clone
-of [batocera-linux/batocera.linux](https://github.com/batocera-linux/batocera.linux),
-pinned to the `batocera-43.1` tag, with a small set of local changes on top.
-Those changes are captured as patches in `batocera-build/`, so this repo
-*is* self-contained — nothing needs to be copied by hand:
+The full buildable `batocera.linux` tree — upstream
+[batocera-linux/batocera.linux](https://github.com/batocera-linux/batocera.linux)
+(originally pinned to the `batocera-43.1` tag) plus every Circuit-Sword
+change on top — is tracked directly in `batocera-build/build/batocera.linux/`
+in this repo. A plain `git clone` of this repo already gives you everything
+needed to build; nothing needs to be copied or patched in by hand.
 
-- `batocera-build/PINNED_COMMITS.txt` — exact upstream commit (outer repo +
-  the `buildroot` submodule) the patches were generated against.
-- `batocera-build/patches/batocera-linux.patch` — everything except WiFi
-  driver enablement and the `buildroot` submodule: DPI/gpio-poweroff/sdio/
-  uart0 `config.txt` block, the genimage EIO-over-bind-mount workaround in
-  `post-image-script.sh`, Docker named-volumes support in `docker.mk`, a
-  `mkimage` PATH fix, dead Kodi mirrors + the `ecwolf` hang disabled, and
-  the controller-wizard fix in `es_input.cfg` (removed the stock wildcard
-  `deviceGUID="-1"` keyboard default, which silently applied a generic
-  mapping to the Arduino Leonardo — since it enumerates as a USB keyboard —
-  and skipped the "press a button" config wizard entirely).
-- `batocera-build/patches/buildroot.patch` — the WiFi enablement:
-  `CONFIG_RTL8723BS=m` added to the kernel defconfig (this uses Linux's own
-  **in-tree** `rtl8723bs` driver — no separate out-of-tree WiFi package was
-  needed, once the right kernel option was found). Plus a few unrelated
-  GCC‑15-compatibility fixes to host packages (`genimage`, `heimdal`,
-  `libzlib`, `m4`, `rust-bin`, `squashfs`) that failed to build under this
-  toolchain's default warning-as-error settings.
-- `batocera-build/patches/0001-remove-broken-K-R-forward-declarations.patch`,
-  `0004-linux-user-fix-redefinition-of-struct-sched_attr.patch` — two more
-  GCC-15 source patches (for `xxd` and `qemu`) applied to downloaded
-  sources at build time, not to repo files directly.
-- `batocera-build/overlay/` — two new runtime config files, carried over
-  from the RetroPie build's known-good WiFi stability fix:
-  `etc/modprobe.d/r8723bs.conf` (`rtw_power_mgnt=0 rtw_ips_mode=0
-  rtw_bw_mode=0`) and `etc/NetworkManager/conf.d/circuitsword-wifi-powersave-off.conf`
-  (`wifi.powersave = 2`).
+The changes on top of stock Batocera include: the DPI/gpio-poweroff/sdio/
+uart0 `config.txt` block, the genimage EIO-over-bind-mount workaround in
+`post-image-script.sh`, Docker named-volumes support in `docker.mk`, a
+`mkimage` PATH fix, dead Kodi mirrors + the `ecwolf` hang disabled, the
+controller-wizard fix in `es_input.cfg` (removed the stock wildcard
+`deviceGUID="-1"` keyboard default, which silently applied a generic mapping
+to the Arduino Leonardo — since it enumerates as a USB keyboard — and
+skipped the "press a button" config wizard entirely), WiFi enablement
+(`CONFIG_RTL8723BS=m` in the kernel defconfig — Linux's own **in-tree**
+`rtl8723bs` driver, no separate out-of-tree WiFi package needed) plus the
+WiFi stability fix at
+`board/batocera/broadcom/bcm2837/fsoverlay/etc/modprobe.d/r8723bs.conf` and
+`.../etc/NetworkManager/conf.d/circuitsword-wifi-powersave-off.conf` (see
+"Hard hardware rules" below), and a few unrelated GCC-15-compatibility
+fixes to host packages (`genimage`, `heimdal`, `libzlib`, `m4`, `rust-bin`,
+`squashfs`, `xxd`, `qemu`) that failed to build under this toolchain's
+default warning-as-error settings.
 
 The full story behind each of these — what broke, why, and the fix — is
 logged in `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.
@@ -78,9 +69,6 @@ for why that's a separate step).
 
 `setup-disk-image.sh` (macOS-only, case-sensitive disk image) is no longer
 part of the default path — see "Docker named volumes" below.
-`setup-build-tree.sh` still exists but only as a standalone
-verification tool, not part of normal setup — see its own header
-comment.
 
 ### Building
 
@@ -144,9 +132,8 @@ siblings) under `build/<pkg>-<version>/` — inside the
   full buildable dev-tree (upstream batocera.linux + every
   Circuit-Sword commit, buildroot flattened in as plain files),
   **tracked directly in this repo since 2026-08-22**, not git-ignored.
-  `patches/`/`overlay/`/`PINNED_COMMITS.txt` are a legacy record of
-  what's inside that tree from before the merge, not the source of
-  truth going forward.
+  This tree is the single source of truth — no separate patch files or
+  pinned-commit records exist outside it anymore.
 - `output/` — small stamp/config files only in the default build mode
   (git-ignored, regenerable); the actual multi-hundred-GB build
   output/downloads/ccache live in Docker named volumes instead — see
@@ -171,7 +158,7 @@ Batocera specifics — they apply regardless of OS:
    network-manager level. This build uses Linux's in-tree `r8723bs`
    driver (`CONFIG_RTL8723BS=m`), same module name as the RetroPie build,
    so the same option names carry over unchanged — see
-   `batocera-build/overlay/`.
+   `batocera-build/build/batocera.linux/board/batocera/broadcom/bcm2837/fsoverlay/`.
 5. **An in-game overlay IS possible on this hardware.** An earlier
    assumption here (no DispmanX/overlay layer, so a HUD couldn't draw
    over a running emulator) turned out to be specific to the old
