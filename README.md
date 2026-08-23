@@ -1,14 +1,14 @@
 # Circuit-Sword on Batocera
 
-Turn a [Circuit-Sword](https://circuit-sword.com/) — the Game Boy-shell
-handheld with a Raspberry Pi Compute Module 3 inside — into a full
+Turn a [Circuit-Sword](https://circuit-sword.com/) (the Game Boy-shell
+handheld with a Raspberry Pi Compute Module 3 inside) into a full
 [Batocera](https://batocera.org/) emulation console: EmulationStation as
 the frontend, Batocera's full emulator/core library, and a real in-game
 overlay, on a from-scratch image built specifically for this board's
-display, controller, and WiFi hardware — not a generic Raspberry Pi image.
+display, controller, and WiFi hardware, not a generic Raspberry Pi image.
 
 This is **not** a migration or dual-boot of the stock RetroPie image the
-Circuit-Sword ships with — it's a ground-up port. See
+Circuit-Sword ships with. It's a ground-up port. See
 [`docs/superpowers/specs/2026-07-28-batocera-port-design.md`](docs/superpowers/specs/2026-07-28-batocera-port-design.md)
 for full design rationale, phasing, and open gaps.
 
@@ -17,32 +17,32 @@ for full design rationale, phasing, and open gaps.
 - Raspberry Pi **Compute Module 3** (CM3, BCM2837, aarch64, 1GB RAM)
 - DPI display
 - RTL8723BS WiFi/Bluetooth
-- On-board **Arduino Leonardo** — controls, battery monitoring, backlight
+- On-board **Arduino Leonardo**: controls, battery monitoring, backlight
 - 2-wire blower fan, physical power switch
 
 ## What this build gets you
 
 - **EmulationStation**, with Batocera's full emulator/core library behind
-  it — not a bare `retroarch` setup.
-- **A real in-game overlay** (`circuitsword-quickmenu`) — battery
-  percentage and charging status, WiFi status, volume and brightness —
+  it, not a bare `retroarch` setup.
+- **A real in-game overlay** (`circuitsword-quickmenu`) showing battery
+  percentage and charging status, WiFi status, and volume/brightness,
   drawn on top of the running emulator via a Wayland layer-shell client,
   not a framebuffer HUD hack. See "Hard hardware rules" below for why
   that was assumed impossible on this hardware, and wasn't.
 - **A WiFi stability fix specific to the RTL8723BS chip** (power-save
-  disabled at both the driver and NetworkManager level — this chip drops
-  its link otherwise), carried over from years of real-world use on the
-  original RetroPie build.
-- **Fan control tuned for this exact board** — temperature-based on/off,
+  disabled at both the driver and NetworkManager level, since this chip
+  drops its link otherwise), carried over from years of real-world use on
+  the original RetroPie build.
+- **Fan control tuned for this exact board**: temperature-based on/off,
   never PWM'd (a 2-wire blower, not a PWM-capable fan).
 - **Joystick calibration** built into the system menu.
-- **Safe, manual-only updates** — no auto-update that silently replaces
-  this custom image with stock Batocera and loses the WiFi/hardware
-  fixes above.
+- **Safe, manual-only updates**, with no auto-update that silently
+  replaces this custom image with stock Batocera and loses the
+  WiFi/hardware fixes above.
 
 ## Status
 
-**First public release available** — see
+**First public release available.** See
 [Releases](https://github.com/Antho91/Circuit-Sword-Batocera/releases)
 for a flashable, on-device-validated image. Known open items (not
 release-blocking) are tracked in
@@ -50,10 +50,10 @@ release-blocking) are tracked in
 
 ## Reproducing the build
 
-The full buildable `batocera.linux` tree — upstream
+The full buildable `batocera.linux` tree, upstream
 [batocera-linux/batocera.linux](https://github.com/batocera-linux/batocera.linux)
 (originally pinned to the `batocera-43.1` tag) plus every Circuit-Sword
-change on top — is tracked directly in `batocera-build/build/batocera.linux/`
+change on top, is tracked directly in `batocera-build/build/batocera.linux/`
 in this repo. A plain `git clone` of this repo already gives you everything
 needed to build; nothing needs to be copied or patched in by hand.
 
@@ -63,10 +63,10 @@ uart0 `config.txt` block, the genimage EIO-over-bind-mount workaround in
 `mkimage` PATH fix, dead Kodi mirrors + the `ecwolf` hang disabled, the
 controller-wizard fix in `es_input.cfg` (removed the stock wildcard
 `deviceGUID="-1"` keyboard default, which silently applied a generic mapping
-to the Arduino Leonardo — since it enumerates as a USB keyboard — and
-skipped the "press a button" config wizard entirely), WiFi enablement
-(`CONFIG_RTL8723BS=m` in the kernel defconfig — Linux's own **in-tree**
-`rtl8723bs` driver, no separate out-of-tree WiFi package needed) plus the
+to the Arduino Leonardo, since it enumerates as a USB keyboard, and skipped
+the "press a button" config wizard entirely), WiFi enablement
+(`CONFIG_RTL8723BS=m` in the kernel defconfig, using Linux's own **in-tree**
+`rtl8723bs` driver, so no separate out-of-tree WiFi package needed) plus the
 WiFi stability fix at
 `board/batocera/broadcom/bcm2837/fsoverlay/etc/modprobe.d/r8723bs.conf` and
 `.../etc/NetworkManager/conf.d/circuitsword-wifi-powersave-off.conf` (see
@@ -75,7 +75,7 @@ fixes to host packages (`genimage`, `heimdal`, `libzlib`, `m4`, `rust-bin`,
 `squashfs`, `xxd`, `qemu`) that failed to build under this toolchain's
 default warning-as-error settings.
 
-The full story behind each of these — what broke, why, and the fix — is
+The full story behind each of these, what broke, why, and the fix, is
 logged in `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.
 
 ### One command, from a clean clone
@@ -85,8 +85,8 @@ batocera-build/scripts/build-all.sh   # /all -- output-dir setup + full image bu
 ```
 
 **Corrected 2026-08-22**: `batocera-build/build/batocera.linux` (the
-full buildable dev-tree) is tracked directly in this repo now — a
-plain `git clone` already gives you everything, no separate build-tree
+full buildable dev-tree) is tracked directly in this repo now. A plain
+`git clone` already gives you everything, no separate build-tree
 checkout step. `build-all.sh` just chains output-dir setup + the build
 step below, mirroring the original RetroPie build's `build.sh all`
 one-shot entry point. Like `build-image.sh`, the final build step still
@@ -94,11 +94,12 @@ runs in the background and logs to
 `docs/superpowers/plans/findings/wifi-build.log`; the script returns
 once it's kicked off rather than blocking for the multi-hour build. On
 success, it automatically extracts the built image out of the Docker
-named volume to `output/images/` on the host — no manual follow-up step
-(see "Docker named volumes" below for why that copy is needed at all).
+named volume to `output/images/` on the host, no manual follow-up step
+needed (see "Docker named volumes" below for why that copy is needed at
+all).
 
 `setup-disk-image.sh` (macOS-only, case-sensitive disk image) is no longer
-part of the default path — see "Docker named volumes" below.
+part of the default path. See "Docker named volumes" below.
 
 ### Building
 
@@ -112,7 +113,7 @@ batocera-build/scripts/extract-artifacts.sh  # copies the built image out of the
 
 All log to `docs/superpowers/plans/findings/wifi-build.log` and run in the
 background (`nohup ... &`) so a closed terminal doesn't kill a multi-hour
-build. Shared paths/flags live in `batocera-build/scripts/env.sh` — override
+build. Shared paths/flags live in `batocera-build/scripts/env.sh`; override
 via environment variables (`BATOCERA_SRC`, `BATOCERA_BUILD_ROOT`, etc.)
 rather than editing the scripts.
 
@@ -122,25 +123,25 @@ By default (`BR_DOCKER_VOLUMES=1` in `env.sh`), the multi-hundred-GB
 Buildroot output/downloads/ccache live inside **Docker named volumes**
 (`batocera-output-bcm2837`, `batocera-dl`, `batocera-ccache`) instead of
 being bind-mounted from the host. These volumes live entirely inside
-Docker Desktop's own Linux VM — measured ~3x faster than the old
+Docker Desktop's own Linux VM, measured ~3x faster than the old
 host-bind-mount path for this workload (many small files, heavy
-chmod/rename traffic — see `WIFI-BUILD-FINDINGS.md` "Performance"
+chmod/rename traffic; see `WIFI-BUILD-FINDINGS.md` "Performance"
 section), and it sidesteps macOS's case-insensitive-APFS problem
-entirely (no case-sensitive disk image needed at all — the thing
+entirely (no case-sensitive disk image needed at all, the thing
 `setup-disk-image.sh` used to work around).
 
 Trade-offs to know:
 - Named volumes aren't Finder-browsable. `build-image.sh`/`build-kernel.sh`/
   `rebuild-package.sh` all automatically copy the finished image out to
-  `output/images/` on success — no manual step needed. To inspect the
+  `output/images/` on success, no manual step needed. To inspect the
   volume directly (e.g. mid-build, or something other than the final
   image), use `docker volume ls` / `docker run --rm -v
   batocera-output-bcm2837:/t <image> ls /t`, or re-run
   `batocera-build/scripts/extract-artifacts.sh` by hand.
-- `output/images/` is never cleaned up automatically — every successful
+- `output/images/` is never cleaned up automatically. Every successful
   build adds another `.img.gz` (~1.8GB each) alongside the old ones.
   Delete old dated images yourself once you don't need them.
-- The cache starts cold the first time — nothing carries over
+- The cache starts cold the first time. Nothing carries over
   automatically from an old host-bind-mount build.
 - To fall back to the old host-bind-mount path (e.g. the disk image is
   approaching its size ceiling and you'd rather manage growth by hand,
@@ -149,53 +150,53 @@ Trade-offs to know:
 
 **Note:** for a targeted rebuild after only editing one or two package's
 files (rather than a from-scratch clone), a plain re-run of `build-image.sh`
-may silently skip your changes — Buildroot only reinstalls a package whose
+may silently skip your changes. Buildroot only reinstalls a package whose
 stamp file is older than its source; a data/script-only edit to an
 already-built package doesn't always bump that automatically. If a rebuilt
 image doesn't reflect an edit, delete that package's
 `.stamp_target_installed` (and the `_installed`/`_staging_installed`
-siblings) under `build/<pkg>-<version>/` — inside the
+siblings) under `build/<pkg>-<version>/`, inside the
 `batocera-output-$BOARD` named volume in the default mode (`docker run
 --rm -v batocera-output-bcm2837:/t <image> rm -f
 /t/build/<pkg>-<version>/.stamp_target_installed ...`), or under
-`$OUTPUT_DIR/$BOARD/build/<pkg>-<version>/` if using `BR_DOCKER_VOLUMES=0`
-— before rebuilding.
+`$OUTPUT_DIR/$BOARD/build/<pkg>-<version>/` if using `BR_DOCKER_VOLUMES=0`,
+before rebuilding.
 
 ## Directory layout
 
-- `batocera-build/` — everything needed to reproduce the build:
-  `scripts/` used to run it, and `build/batocera.linux` — the actual
+- `batocera-build/`: everything needed to reproduce the build.
+  `scripts/` used to run it, and `build/batocera.linux`, the actual
   full buildable dev-tree (upstream batocera.linux + every
   Circuit-Sword commit, buildroot flattened in as plain files),
   **tracked directly in this repo since 2026-08-22**, not git-ignored.
-  This tree is the single source of truth — no separate patch files or
+  This tree is the single source of truth. No separate patch files or
   pinned-commit records exist outside it anymore.
-- `output/` — in the default build mode (git-ignored, regenerable): small
+- `output/`: in the default build mode (git-ignored, regenerable), small
   stamp/config files, plus `output/images/`, where every successfully
   built `.img.gz`/`boot.tar.xz` gets auto-extracted (accumulates over
-  time — see "Docker named volumes" above). The actual multi-hundred-GB
+  time; see "Docker named volumes" above). The actual multi-hundred-GB
   build output/downloads/ccache live in Docker named volumes, not here.
   `output/` only becomes the real multi-hundred-GB tree (a mounted
   case-sensitive disk image on macOS) if you opt out with
-  `BR_DOCKER_VOLUMES=0` — see `batocera-build/scripts/setup-disk-image.sh`.
-- `docs/superpowers/specs/` — design docs.
-- `docs/superpowers/plans/` — phase implementation plans and findings logs
+  `BR_DOCKER_VOLUMES=0`. See `batocera-build/scripts/setup-disk-image.sh`.
+- `docs/superpowers/specs/`: design docs.
+- `docs/superpowers/plans/`: phase implementation plans and findings logs
   (the detailed "what broke and how it was fixed" record for each phase).
 
 ## Hard hardware rules
 
 These come from real incidents on this exact board, not from RetroPie or
-Batocera specifics — they apply regardless of OS:
+Batocera specifics, so they apply regardless of OS:
 
-1. **Never PWM the fan.** It's a 2-wire blower — on/off only, temperature-based.
+1. **Never PWM the fan.** It's a 2-wire blower: on/off only, temperature-based.
 2. **`-j2` max for on-device builds.** 1GB RAM; `-j3+` OOMs even with zram.
 3. **Updates stay manual/user-triggered.** No auto-update behavior.
 4. **WiFi (RTL8723BS) stability**: `rtw_power_mgnt=0 rtw_ips_mode=0
-   rtw_bw_mode=0` (disables power-save + caps to 20MHz — HT40 causes
+   rtw_bw_mode=0` (disables power-save + caps to 20MHz, since HT40 causes
    intermittent drops on this chip) plus WiFi power-save disabled at the
    network-manager level. This build uses Linux's in-tree `r8723bs`
    driver (`CONFIG_RTL8723BS=m`), same module name as the RetroPie build,
-   so the same option names carry over unchanged — see
+   so the same option names carry over unchanged. See
    `batocera-build/build/batocera.linux/board/batocera/broadcom/bcm2837/fsoverlay/`.
 5. **An in-game overlay IS possible on this hardware.** An earlier
    assumption here (no DispmanX/overlay layer, so a HUD couldn't draw
@@ -203,8 +204,8 @@ Batocera specifics — they apply regardless of OS:
    RetroPie build's bare KMS/DRM stack, not a hardware limitation. This
    Batocera build runs `labwc` (a wlroots Wayland compositor) as
    EmulationStation's windowing backend for the whole session, and ships
-   a real in-game overlay (`circuitsword-quickmenu`) built on that —
-   see `CLAUDE.md`'s hard rules for the full correction and history.
+   a real in-game overlay (`circuitsword-quickmenu`) built on that. See
+   `CLAUDE.md`'s hard rules for the full correction and history.
 
 Full details: [`CLAUDE.md`](CLAUDE.md).
 
@@ -212,44 +213,33 @@ Full details: [`CLAUDE.md`](CLAUDE.md).
 
 Build system: Buildroot, via Docker (`batoceralinux/batocera.linux-build`,
 multi-arch). Built and tested on macOS with Docker Desktop; should also work
-on Linux/WSL2 (untested end-to-end — see
+on Linux/WSL2 (untested end-to-end; see
 `docs/superpowers/plans/reference/WINDOWS-WSL2-MIGRATION.md` for a partial migration
 checklist written mid-build).
 
 ### Requirements, timing, and the actual build workflow
 
 See **[`BUILDING.md`](BUILDING.md)** for current, verified Prerequisites
-(disk space, Docker RAM/CPU allocation) and Timing numbers — a real,
+(disk space, Docker RAM/CPU allocation) and Timing numbers. A real,
 from-scratch cold-cache build was timed end-to-end (~32h on an 8-core
 Apple Silicon Mac; see BUILDING.md for the full breakdown and speedup
 recommendations), superseding any number that used to live in this
 section.
 
-- **First-time bring-up build (this project's actual history):** the
-  build ran from 2026-07-29 to 2026-08-04 — about 6 calendar days
-  wall-clock. This is **not** a realistic "build time" estimate: it
-  includes a full macOS crash and recovery, several disk-image resizes,
-  and roughly two dozen distinct package/toolchain failures that each
-  needed diagnosis and a source-level fix (dead download mirrors, GCC 15
-  strictness changes, a Buildroot RPATH false-positive, a hung git
-  submodule prompt, a deterministic I/O error in the final image-write
-  step). All of those fixes are now baked into the patch set above, so a
-  fresh clone with the patches already applied should not hit them again.
-
 ### Build command
 
 See **[`BUILDING.md`](BUILDING.md)** for the actual day-to-day build
 workflow (prerequisites, the exact commands, and the non-obvious traps
-this project has hit) — that document, not this README, is the source
+this project has hit). That document, not this README, is the source
 of truth for how to actually run a build. Short version: the dev-tree
 (`batocera-build/build/batocera.linux`) is tracked directly in this
-repo now, so a plain `git clone` already gives you everything — no
+repo now, so a plain `git clone` already gives you everything, no
 separate setup step. Then:
 
 - `build-image.sh` / `build-kernel.sh` / `build-wifi.sh` for a full
   build or repackage.
 - **`batocera-build/scripts/rebuild-package.sh <package-name>
-  [reinstall]`** after editing one package's source/patches — forces a
+  [reinstall]`** after editing one package's source/patches. Forces a
   clean rebuild of just that package (handling CLAUDE.md Hard Rule #7
   automatically: a full build alone does NOT pick up edited source in
   an already-built package) and repackages the image. Defaults to the
@@ -264,19 +254,19 @@ Full troubleshooting history (every error hit and its fix) is in
 ## Flashing and first boot
 
 1. Flash the resulting `batocera-bcm2837-*.img.gz` with Raspberry Pi Imager
-   ("Use custom" — do not unzip first, the Imager handles `.gz` directly).
+   ("Use custom", do not unzip first, the Imager handles `.gz` directly).
    `dd` on macOS hit permission issues in earlier testing; Raspberry Pi
    Imager was used instead.
 2. Boot, then set WiFi **on the live system**. SSH is not reachable until
    the device already has network, so start with whichever of these gets
    you there:
 
-   - **Option A — EmulationStation menu (no network needed, do this
+   - **Option A, EmulationStation menu (no network needed, do this
      first):** `Menu (Start) → Network Settings` on the device itself,
-     using the controls — enable WiFi, fill in SSID/password. This is
+     using the controls: enable WiFi, fill in SSID/password. This is
      the only step that works with zero prior network access.
-   - **Option B — SSH, once you have network** (either from Option A
-     already being done, or after a one-boot `boot.conf` bootstrap — see
+   - **Option B, SSH, once you have network** (either from Option A
+     already being done, or after a one-boot `boot.conf` bootstrap, see
      the warning below):
      ```bash
      ssh root@<device-ip>
@@ -288,27 +278,27 @@ Full troubleshooting history (every error hit and its fix) is in
      (never paste real credentials into chat or commit them).
 
    Either path writes to `/userdata/system/batocera.conf`, the persistent
-   master config — the only place that survives.
+   master config, the only place that survives.
 
    **Do not rely on pre-filling `/boot/batocera-boot.conf` on the SD card**
    (e.g. via a Mac-mounted `/Volumes/BATOCERA/batocera-boot.conf`) as a
    substitute for the step above. Confirmed on real hardware this is a trap:
    `S08connman` *does* fall back to reading `boot.conf` for WiFi setup, but
    only on the very first boot, while `/userdata/system/batocera.conf`
-   doesn't exist yet — and it never copies those values into `/userdata`.
+   doesn't exist yet, and it never copies those values into `/userdata`.
    The very first shutdown then runs `S65values4boot`, which syncs
    `boot.conf` *from* the (still-blank) `/userdata` master, silently wiping
    out whatever you'd pre-filled. Net effect: WiFi works for exactly one
-   boot, then reverts to disabled on every boot after — looking like it
+   boot, then reverts to disabled on every boot after, looking like it
    "turned itself off". `boot.conf` pre-filling is a one-shot bootstrap at
    best; the values above are the only thing that actually persists.
 3. Boot on the Circuit-Sword. Controller buttons (Arduino Leonardo) will
-   prompt for manual configuration on first boot — see the "Configure a
+   prompt for manual configuration on first boot; see the "Configure a
    Controller" note in the findings log if it needs to be redone later via
    `Menu → Controllers and Bluetooth → Configure a Controller`.
 4. **One-time: enable the hardware daemon.** The fan/battery/backlight/
    shutdown daemon (Phase 3) is built into the image but stays inactive
-   until the `CIRCUITSWORD` power-switch profile is selected — this is a
+   until the `CIRCUITSWORD` power-switch profile is selected. This is a
    `system.power.switch` setting, which (like WiFi credentials) lives on the
    `/userdata` partition and is never baked into the image itself. Without
    this step the fan will spin continuously (GPIO 35 floats to its default
@@ -319,16 +309,16 @@ Full troubleshooting history (every error hit and its fix) is in
    /etc/init.d/S92switch restart
    ```
    (or set it via `Menu → System Settings` in EmulationStation, then
-   reboot). This survives ordinary use and reboots — it only needs to be
+   reboot). This survives ordinary use and reboots; it only needs to be
    redone after a full SD-card reflash, never after a
    [safe update](#the-safe-update-procedure), since that only touches
    `/userdata/system/upgrade/`.
 
 ## Updating the device
 
-This device runs a custom kernel (WiFi driver, and — as of Phase 3 — a
+This device runs a custom kernel (WiFi driver, and, as of Phase 3, a
 hardware daemon for fan/battery/backlight/shutdown) baked into the system
-image. Batocera's own stock update server has no idea any of that exists —
+image. Batocera's own stock update server has no idea any of that exists:
 accepting a stock update replaces the whole system image and silently loses
 all of it until our custom image is reapplied.
 
@@ -336,14 +326,14 @@ all of it until our custom image is reapplied.
 (`updates.enabled=0` in the shipped `batocera.conf`) specifically so this
 never happens by surprise. If you ever see an update prompt anyway (e.g.
 after manually re-enabling the check, or pressing "Update" in the
-EmulationStation menu yourself), do not accept it — it always needs the
+EmulationStation menu yourself), do not accept it. It always needs the
 manual procedure below afterward regardless.
 
-**Game saves are never at risk from this** — `batocera-upgrade` (in any
+**Game saves are never at risk from this.** `batocera-upgrade` (in any
 mode) only ever touches `/userdata/system/upgrade/`, confirmed by reading
 its source. The one thing that *does* wipe saves is a full SD-card reflash
 (Raspberry Pi Imager writes the whole disk), which is never necessary for
-an update — only use that for the very first flash, or true recovery.
+an update; only use that for the very first flash, or true recovery.
 
 ### The safe update procedure
 
@@ -352,22 +342,22 @@ an update — only use that for the very first flash, or true recovery.
    is tracked directly in this repo (not regenerated from
    `batocera-build/patches/` anymore), pulling in a newer upstream
    commit now means merging upstream's changes directly into that
-   tracked tree — e.g. `git subtree pull --prefix=batocera-build/build/
+   tracked tree, e.g. `git subtree pull --prefix=batocera-build/build/
    batocera.linux <upstream-remote> <branch>` (resolve any conflicts if
    upstream touched the same lines our commits did), or an equivalent
    manual merge. This workflow hasn't been exercised since the
-   2026-08-22 restructuring — expect to work out the exact command the
+   2026-08-22 restructuring; expect to work out the exact command the
    first time you do this. Then `batocera-build/scripts/build-image.sh`.
 2. Publish the resulting `boot.tar.xz` (found alongside the
-   `.img.gz` in the build output) somewhere you can get it back — a GitHub
+   `.img.gz` in the build output) somewhere you can get it back. A GitHub
    Release on this repo works well for this (Releases handle files up to
    2GB; this is purely an archive/download point, **not** wired up as a
-   live `updates.url` target — GitHub has no clean way to serve the exact
+   live `updates.url` target: GitHub has no clean way to serve the exact
    nested `<board>/<type>/last/boot.tar.xz` path structure
    `batocera-upgrade`'s automatic-download path expects, so don't try to
    make the ES "Update" button fetch from it directly).
 3. Get `boot.tar.xz` onto the device at exactly
-   `/userdata/system/upgrade/boot.tar.xz` — easiest via the device's SMB
+   `/userdata/system/upgrade/boot.tar.xz`, easiest via the device's SMB
    network share (drag the file onto `\\<device-ip>\share\system\upgrade\`
    or the macOS/Finder equivalent), no SSH needed for this step.
 4. SSH in and run the one command that applies it:
@@ -375,8 +365,8 @@ an update — only use that for the very first flash, or true recovery.
    ssh root@<device-ip>
    batocera-upgrade manual
    ```
-   This uses the local file instead of downloading, and — like every other
-   `batocera-upgrade` mode — never touches `/userdata` outside the
+   This uses the local file instead of downloading, and, like every other
+   `batocera-upgrade` mode, never touches `/userdata` outside the
    `upgrade/` staging folder, so saves are untouched.
 
 ## No CI, no hardware in CI
@@ -391,15 +381,15 @@ validation on the real Circuit-Sword.
 This repository vendors and patches [Batocera Linux](https://batocera.org/)
 (built on [Buildroot](https://buildroot.org/)), which is licensed under the
 GNU General Public License v2, or (at the licensor's option) any later
-version — see `batocera-build/build/batocera.linux/COPYING`. This project
+version. See `batocera-build/build/batocera.linux/COPYING`. This project
 exercises that later-version option: the whole repository, including this
 repo's own scripts, patches, and documentation, is distributed under
-**GPLv3** — see [`LICENSE`](LICENSE) — matching the original RetroPie-based
+**GPLv3**. See [`LICENSE`](LICENSE), matching the original RetroPie-based
 [Circuit-Sword](https://github.com/Antho91/Circuit-Sword) project this repo
 replaces.
 
 Early in this project, [jecaro/circuix-sword](https://github.com/jecaro/circuix-sword)
 (an independent NixOS-based Circuit-Sword project) was kept as read-only
 reference material and helped inform the WiFi stability fix and some
-DPI/Arduino protocol details — credited here since the reference tree
+DPI/Arduino protocol details. Credited here since the reference tree
 itself was later removed once this port had absorbed what it needed.
