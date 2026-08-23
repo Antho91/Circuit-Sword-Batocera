@@ -71,8 +71,11 @@ case "$1" in
                     # (/lib/firmware/rtl_bt/rtl8723bs_fw.bin + _config.bin)
                     # ships via alllinuxfirmwares -- so this is just the
                     # standard mainline H5 (three-wire) attach, no vendor
-                    # userspace tool needed.
-                    /usr/bin/btattach -B /dev/ttyAMA0 -P h5 -S 115200 &
+                    # userspace tool needed. Confirmed on real hardware:
+                    # bluez's btattach names this protocol "3wire", not
+                    # "h5" (matches the kernel's HCI_UART_3WIRE) -- "-P h5"
+                    # fails with "Invalid protocol".
+                    /usr/bin/btattach -B /dev/ttyAMA0 -P 3wire -S 115200 &
                     sleep 2
                 ;;
                 bcm4345c5)
