@@ -1,28 +1,51 @@
 # Circuit-Sword on Batocera
 
-A from-scratch replacement of the [Circuit-Sword](https://circuit-sword.com/)
-handheld's stock RetroPie image with a [Batocera](https://batocera.org/)-based
-image, targeting the same hardware: a Raspberry Pi **Compute Module 3**
-(CM3, BCM2837, aarch64, 1GB RAM) Game Boy mod kit with a DPI display,
-RTL8723BS WiFi/Bluetooth, and an on-board Arduino Leonardo for
-controls/battery/backlight.
+Turn a [Circuit-Sword](https://circuit-sword.com/) — the Game Boy-shell
+handheld with a Raspberry Pi Compute Module 3 inside — into a full
+[Batocera](https://batocera.org/) emulation console: EmulationStation as
+the frontend, Batocera's full emulator/core library, and a real in-game
+overlay, on a from-scratch image built specifically for this board's
+display, controller, and WiFi hardware — not a generic Raspberry Pi image.
 
-This is **not** a migration or dual-boot of the existing RetroPie build —
-it's a ground-up port. See
+This is **not** a migration or dual-boot of the stock RetroPie image the
+Circuit-Sword ships with — it's a ground-up port. See
 [`docs/superpowers/specs/2026-07-28-batocera-port-design.md`](docs/superpowers/specs/2026-07-28-batocera-port-design.md)
 for full design rationale, phasing, and open gaps.
+
+## The hardware this targets
+
+- Raspberry Pi **Compute Module 3** (CM3, BCM2837, aarch64, 1GB RAM)
+- DPI display
+- RTL8723BS WiFi/Bluetooth
+- On-board **Arduino Leonardo** — controls, battery monitoring, backlight
+- 2-wire blower fan, physical power switch
+
+## What this build gets you
+
+- **EmulationStation**, with Batocera's full emulator/core library behind
+  it — not a bare `retroarch` setup.
+- **A real in-game overlay** (`circuitsword-quickmenu`) — battery
+  percentage and charging status, WiFi status, volume and brightness —
+  drawn on top of the running emulator via a Wayland layer-shell client,
+  not a framebuffer HUD hack. See "Hard hardware rules" below for why
+  that was assumed impossible on this hardware, and wasn't.
+- **A WiFi stability fix specific to the RTL8723BS chip** (power-save
+  disabled at both the driver and NetworkManager level — this chip drops
+  its link otherwise), carried over from years of real-world use on the
+  original RetroPie build.
+- **Fan control tuned for this exact board** — temperature-based on/off,
+  never PWM'd (a 2-wire blower, not a PWM-capable fan).
+- **Joystick calibration** built into the system menu.
+- **Safe, manual-only updates** — no auto-update that silently replaces
+  this custom image with stock Batocera and loses the WiFi/hardware
+  fixes above.
 
 ## Status
 
 **First public release available** — see
 [Releases](https://github.com/Antho91/Circuit-Sword-Batocera/releases)
-for a flashable, on-device-validated image.
-
-- **Phase 0** (base Batocera boot, DPI display, GPIO poweroff, SDIO, UART) — done, see `docs/superpowers/plans/findings/PHASE0-FINDINGS.md`.
-- **Phase 2** (WiFi/connectivity — RTL8723BS driver baked into the image, stability fix) — done, validated on-device. See `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.
-- **Phase 3** (hardware daemon: fan/battery/shutdown/backlight, in-game overlay) — done, validated on-device: power switch, joystick calibration, battery/charging status, fan control.
-
-Known open items (not release-blocking) are tracked in
+for a flashable, on-device-validated image. Known open items (not
+release-blocking) are tracked in
 `docs/superpowers/specs/2026-07-28-batocera-port-design.md` ("Open gaps").
 
 ## Reproducing the build
