@@ -137,6 +137,7 @@ menu "System"
     source "$BR2_EXTERNAL_BATOCERA_PATH/package/batocera/utils/circuitsword-backlight/Config.in"
     source "$BR2_EXTERNAL_BATOCERA_PATH/package/batocera/utils/circuitsword-quickmenu/Config.in"
     source "$BR2_EXTERNAL_BATOCERA_PATH/package/batocera/utils/circuitsword-statusbar/Config.in"
+    source "$BR2_EXTERNAL_BATOCERA_PATH/package/batocera/utils/circuitsword-rtk-bluetooth/Config.in"
     source "$BR2_EXTERNAL_BATOCERA_PATH/package/batocera/network/rtl8852cu/Config.in"
   endmenu
 

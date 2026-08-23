@@ -1,0 +1,8 @@
+config BR2_PACKAGE_CIRCUITSWORD_RTK_BLUETOOTH
+	bool "circuitsword-rtk-bluetooth"
+	help
+	  rtk_hciattach + firmware for the Circuit-Sword's on-board RTL8723BS
+	  Bluetooth (UART-attached, /dev/ttyAMA0). Vendored from the original
+	  RetroPie-based Circuit-Sword build -- the proven-working attach
+	  tool for this chip; bluez's generic btattach cannot complete the
+	  chip's firmware/config download step.

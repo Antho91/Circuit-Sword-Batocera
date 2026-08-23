@@ -66,17 +66,22 @@ case "$1" in
                 ;;
                 rtl8723bs)
                     # Circuit-Sword: RTL8723BS combo WiFi/BT chip, UART-attached
-                    # on /dev/ttyAMA0. Kernel already has CONFIG_BT_RTL and
-                    # CONFIG_BT_HCIUART_3WIRE built in, and the firmware
-                    # (/lib/firmware/rtl_bt/rtl8723bs_fw.bin + _config.bin)
-                    # ships via alllinuxfirmwares -- so this is just the
-                    # standard mainline H5 (three-wire) attach, no vendor
-                    # userspace tool needed. Confirmed on real hardware:
-                    # bluez's btattach names this protocol "3wire", not
-                    # "h5" (matches the kernel's HCI_UART_3WIRE) -- "-P h5"
-                    # fails with "Invalid protocol".
-                    /usr/bin/btattach -B /dev/ttyAMA0 -P 3wire -S 115200 &
-                    sleep 2
+                    # on /dev/ttyAMA0. Confirmed on real hardware: bluez's
+                    # generic `btattach -P 3wire` completes the line-discipline
+                    # switch and H5 sync but then fails with "Protocol driver
+                    # not attached" -- it has no way to do the Realtek-specific
+                    # firmware/config download this chip needs before the HCI
+                    # device actually comes up. rtk_hciattach (vendored from
+                    # circuitsword-rtk-bluetooth, carried over as-is from the
+                    # original RetroPie-based Circuit-Sword build, the only
+                    # proven-working combination for this exact chip/board)
+                    # handles that download itself.
+                    /usr/bin/rtk_hciattach -n -s 115200 /dev/ttyAMA0 rtk_h5 &
+                    # The adapter comes up rfkill soft-blocked, so bluetoothd
+                    # can't power it on until this is cleared -- matches the
+                    # original build's systemd ExecStartPost timing exactly.
+                    sleep 3
+                    rfkill unblock bluetooth
                 ;;
                 bcm4345c5)
                     /usr/bin/brcm_patchram_plus --enable_hci --no2bytes --tosleep 200000 \
