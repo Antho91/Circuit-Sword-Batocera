@@ -12,6 +12,13 @@ BATOCERA_BLUETOOTH_STACK=
 
 ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_BCM2835)$(BR2_PACKAGE_BATOCERA_TARGET_BCM2835),y)
     BATOCERA_BLUETOOTH_STACK=bcm921 piscan
+else ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_BCM2837),y)
+    # Circuit-Sword: RTL8723BS combo WiFi/BT chip, UART-attached (see
+    # board/batocera/broadcom/bcm2837/boot/config.txt's uart0 overlay,
+    # confirmed on real hardware to expose /dev/ttyAMA0). No board here
+    # matched BCM2837 before, so this board's Bluetooth was never
+    # attached at all (BATOCERA_BLUETOOTH_STACK stayed empty).
+    BATOCERA_BLUETOOTH_STACK=rtl8723bs
 else ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_RK3288),y) # tinkerboard only ??
     BATOCERA_BLUETOOTH_STACK=rfkreset rtk115
 else ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_RK3399),y)

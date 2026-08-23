@@ -64,6 +64,17 @@ case "$1" in
                     /usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd & # specific for certain orangepi boards
                     sleep 2
                 ;;
+                rtl8723bs)
+                    # Circuit-Sword: RTL8723BS combo WiFi/BT chip, UART-attached
+                    # on /dev/ttyAMA0. Kernel already has CONFIG_BT_RTL and
+                    # CONFIG_BT_HCIUART_3WIRE built in, and the firmware
+                    # (/lib/firmware/rtl_bt/rtl8723bs_fw.bin + _config.bin)
+                    # ships via alllinuxfirmwares -- so this is just the
+                    # standard mainline H5 (three-wire) attach, no vendor
+                    # userspace tool needed.
+                    /usr/bin/btattach -B /dev/ttyAMA0 -P h5 -S 115200 &
+                    sleep 2
+                ;;
                 bcm4345c5)
                     /usr/bin/brcm_patchram_plus --enable_hci --no2bytes --tosleep 200000 \
                         --baudrate 1500000 --patchram /lib/firmware/BCM4345C5.hcd /dev/ttyAS1 &
