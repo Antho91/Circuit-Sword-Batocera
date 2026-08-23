@@ -173,17 +173,21 @@ and prints where the finished image will land):
 batocera-build/scripts/build-image.sh
 ```
 
-Once finished, the image lands **inside the Docker named volume**
+The build itself produces the image **inside the Docker named volume**
 (`batocera-output-bcm2837`), not directly on the host filesystem — named
-volumes aren't Finder-browsable. Extract it:
+volumes aren't Finder-browsable. `build-image.sh` (and `build-kernel.sh`,
+`rebuild-package.sh`) automatically extract it on success, copying the
+built image(s) to `output/images/` on the host — no manual step needed.
+
+`output/images/` is never cleaned up automatically; each successful
+build adds another dated `.img.gz` (~1.8GB) alongside the old ones.
+
+To re-extract by hand (e.g. after inspecting the volume directly) or to
+a different destination:
 
 ```bash
-batocera-build/scripts/extract-artifacts.sh
+batocera-build/scripts/extract-artifacts.sh [destination-dir]
 ```
-
-This copies the built image(s) out of the `batocera-output-bcm2837`
-Docker volume to `output/images/` on the host (or a destination you pass
-as its first argument).
 
 ### Rebuilding a single package after a source edit — Hard Rule #7
 

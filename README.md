@@ -14,9 +14,16 @@ for full design rationale, phasing, and open gaps.
 
 ## Status
 
+**First public release available** — see
+[Releases](https://github.com/Antho91/Circuit-Sword-Batocera/releases)
+for a flashable, on-device-validated image.
+
 - **Phase 0** (base Batocera boot, DPI display, GPIO poweroff, SDIO, UART) — done, see `docs/superpowers/plans/findings/PHASE0-FINDINGS.md`.
-- **Phase 2** (WiFi/connectivity — RTL8723BS driver baked into the image) — build succeeded, hardware validation in progress. See `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.
-- **Phase 3** (hardware daemon: fan/battery/shutdown/backlight, cs-hud) — not started.
+- **Phase 2** (WiFi/connectivity — RTL8723BS driver baked into the image, stability fix) — done, validated on-device. See `docs/superpowers/plans/findings/WIFI-BUILD-FINDINGS.md`.
+- **Phase 3** (hardware daemon: fan/battery/shutdown/backlight, in-game overlay) — done, validated on-device: power switch, joystick calibration, battery/charging status, fan control.
+
+Known open items (not release-blocking) are tracked in
+`docs/superpowers/specs/2026-07-28-batocera-port-design.md` ("Open gaps").
 
 ## Reproducing the build
 
@@ -62,10 +69,10 @@ step below, mirroring the original RetroPie build's `build.sh all`
 one-shot entry point. Like `build-image.sh`, the final build step still
 runs in the background and logs to
 `docs/superpowers/plans/findings/wifi-build.log`; the script returns
-once it's kicked off rather than blocking for the multi-hour build.
-Once it finishes, run `batocera-build/scripts/extract-artifacts.sh` to
-copy the built image out to the host (see "Docker named volumes" below
-for why that's a separate step).
+once it's kicked off rather than blocking for the multi-hour build. On
+success, it automatically extracts the built image out of the Docker
+named volume to `output/images/` on the host — no manual follow-up step
+(see "Docker named volumes" below for why that copy is needed at all).
 
 `setup-disk-image.sh` (macOS-only, case-sensitive disk image) is no longer
 part of the default path — see "Docker named volumes" below.
@@ -77,7 +84,7 @@ batocera-build/scripts/build-image.sh        # /buildimg    -- full image build
 batocera-build/scripts/build-kernel.sh       # /buildkernel -- kernel-only rebuild + repackage
 batocera-build/scripts/build-wifi.sh         # /buildwifi   -- WiFi is an in-tree kernel driver here, delegates to build-kernel.sh
 batocera-build/scripts/rebuild-package.sh    # rebuild one package after editing its source/patches + repackage (see "Build command" below)
-batocera-build/scripts/extract-artifacts.sh  # copies the built image out of the Docker named volume onto the host
+batocera-build/scripts/extract-artifacts.sh  # copies the built image out of the Docker named volume onto the host (runs automatically after every successful build above; call directly only to re-extract or inspect)
 ```
 
 All log to `docs/superpowers/plans/findings/wifi-build.log` and run in the
@@ -100,10 +107,16 @@ entirely (no case-sensitive disk image needed at all — the thing
 `setup-disk-image.sh` used to work around).
 
 Trade-offs to know:
-- Named volumes aren't Finder-browsable. Use
-  `batocera-build/scripts/extract-artifacts.sh` after a build to copy the
-  image out, or `docker volume ls` / `docker run --rm -v
-  batocera-output-bcm2837:/t <image> ls /t` to inspect directly.
+- Named volumes aren't Finder-browsable. `build-image.sh`/`build-kernel.sh`/
+  `rebuild-package.sh` all automatically copy the finished image out to
+  `output/images/` on success — no manual step needed. To inspect the
+  volume directly (e.g. mid-build, or something other than the final
+  image), use `docker volume ls` / `docker run --rm -v
+  batocera-output-bcm2837:/t <image> ls /t`, or re-run
+  `batocera-build/scripts/extract-artifacts.sh` by hand.
+- `output/images/` is never cleaned up automatically — every successful
+  build adds another `.img.gz` (~1.8GB each) alongside the old ones.
+  Delete old dated images yourself once you don't need them.
 - The cache starts cold the first time — nothing carries over
   automatically from an old host-bind-mount build.
 - To fall back to the old host-bind-mount path (e.g. the disk image is
@@ -134,11 +147,13 @@ siblings) under `build/<pkg>-<version>/` — inside the
   **tracked directly in this repo since 2026-08-22**, not git-ignored.
   This tree is the single source of truth — no separate patch files or
   pinned-commit records exist outside it anymore.
-- `output/` — small stamp/config files only in the default build mode
-  (git-ignored, regenerable); the actual multi-hundred-GB build
-  output/downloads/ccache live in Docker named volumes instead — see
-  "Docker named volumes" above. Only becomes the real multi-hundred-GB
-  tree (a mounted case-sensitive disk image on macOS) if you opt out with
+- `output/` — in the default build mode (git-ignored, regenerable): small
+  stamp/config files, plus `output/images/`, where every successfully
+  built `.img.gz`/`boot.tar.xz` gets auto-extracted (accumulates over
+  time — see "Docker named volumes" above). The actual multi-hundred-GB
+  build output/downloads/ccache live in Docker named volumes, not here.
+  `output/` only becomes the real multi-hundred-GB tree (a mounted
+  case-sensitive disk image on macOS) if you opt out with
   `BR_DOCKER_VOLUMES=0` — see `batocera-build/scripts/setup-disk-image.sh`.
 - `docs/superpowers/specs/` — design docs.
 - `docs/superpowers/plans/` — phase implementation plans and findings logs
