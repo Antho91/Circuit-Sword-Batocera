@@ -181,19 +181,27 @@ Brightness.
 
 ### Open gaps needing a decision or investigation (tracked, not silently dropped)
 
-1. Brightness: custom-only vs. Linux backlight-class shim (see above).
-2. `cs-configure.py` (Kite's original Python2 serial config tool) — purpose
-   unclear: end-user tool or factory/calibration-only? Needs clarifying before
-   deciding whether it needs a Batocera port at all.
+1. ~~Brightness: custom-only vs. Linux backlight-class shim~~ — **RESOLVED**:
+   the `circuitsword_backlight` kernel module registers a standard
+   `/sys/class/backlight` device, so `batocera-brightness` picks it up
+   unchanged.
+2. ~~`cs-configure.py` purpose~~ — **RESOLVED 2026-08-11**: it is an
+   end-user joystick calibration tool; ported as the quickmenu/daemon
+   calibration feature, see `2026-08-11-joystick-calibration-design.md`.
+   `cs-tester.py` has no port and none is planned.
 3. Bluetooth pairing UI compatibility with a UART-attached (not USB) BT chip.
-4. Python runtime availability on Batocera's minimal image — `cs-configure.py`
-   / `cs-tester.py` are Python; may need Python added as a runtime dependency,
-   or a rewrite in shell/C, if they need to keep working.
+   **Still open.** The attach path was wired up 2026-08-23 (`rtk_hciattach`),
+   but pairing through Batocera's UI is unverified on-device.
+4. ~~Python runtime availability~~ — **RESOLVED**: the hardware daemon
+   (`rpi-circuitsword.py`) already runs as Python on the image.
 5. SSH-on / default-credentials policy — current CS hard rule #7 treats this
    as a deliberate, discussed trade-off. Batocera's own defaults may differ;
-   must be an explicit decision, not an inherited default.
+   must be an explicit decision, not an inherited default. **Still open**:
+   the README documents `ssh root@<device-ip>` but no decision is recorded.
 6. OTA update rollback safety — needs verifying before it can be trusted to
-   fully replace `cs-update`'s backup/rollback behavior.
+   fully replace `cs-update`'s backup/rollback behavior. **Still open**:
+   updates are disabled by default (`updates.enabled=0`) and a manual
+   procedure is documented, but rollback was never tested.
 7. ~~Kernel version compatibility~~ — **RESOLVED (Phase 0)**: Batocera 43.1
    ships kernel 6.12.62, which predates both known API breaks (6.15
    timer renames, 6.18 cfg80211 changes) — the old `compat.h` shims aren't
@@ -265,8 +273,9 @@ Brightness.
    safety net if the battery hits 0% while playing, a real gap, but the
    user chose not to close it now. Re-propose only if this becomes a real
    problem in practice (revisit if the board is ever found dead/corrupted
-   after running flat). A related, smaller gap was also found and
-   similarly left open: `batocera-battery-checker`'s AC-vs-battery
+   after running flat). A related, smaller gap was also found
+   (**since FIXED, see `2026-08-13-ac-battery-detection-design.md`**: the
+   module now has an `online` parameter fed from GPIO 38 by the daemon): `batocera-battery-checker`'s AC-vs-battery
    detection reads `/sys/class/power_supply/*/online`, a property
    `circuitsword_battery`'s kernel module doesn't expose (only
    PRESENT/STATUS/CAPACITY/TECHNOLOGY/SCOPE) — likely means Batocera
